@@ -6,10 +6,34 @@ from termcolor import colored
 from nuclei_utils import run_nuclei_scans, update_nuclei
 from openvas_utils import openvas_scan, update_nvt, update_scap, update_cert
 from report_utils import generate_report
-from config_utils import update_config_file  # Ensure this import is here
+from config_utils import update_config_file
 
-# Place the argument parsing at the very top of the main function
 def main():
+    """
+       Main function to handle the execution of the vulnerability scanning and exploitation tool.
+
+       This function performs the following tasks:
+       - Parses command-line arguments.
+       - Verifies if the script is being run with root privileges.
+       - Displays a logo and a warning message.
+       - Creates directories for storing reports and results.
+       - Updates the configuration file with provided arguments.
+       - Runs Nuclei scans and updates.
+       - Updates the Greenbone Vulnerability Manager (GVM) feeds.
+       - Executes the OpenVAS scan and generates a report based on the scan results.
+
+       Command-line Arguments:
+           --config (str): Path to the config.ini file.
+           --username (str): Username for the GVM server.
+           --password (str): Password for the GVM server.
+           --path (str): Path to the Unix socket for GVM connection.
+           --port_list_name (str): Port list name for target configuration.
+           --scan_config (str): Scan configuration ID.
+           --scanner (str): Scanner ID.
+           --target_name (str): Name of the target.
+           --target_ip (str): IP address of the target to be scanned or file containing one IP address per line.
+           --task_name (str): Name of the task to be created and executed.
+       """
     parser = argparse.ArgumentParser(
         description="Update config.ini settings.",
         epilog="""Example usage:
@@ -23,17 +47,18 @@ def main():
     parser.add_argument('--scan_config', type=str, help='Scan configuration ID')
     parser.add_argument('--scanner', type=str, help='Scanner ID')
     parser.add_argument('--target_name', type=str, help='Name of the target')
-    parser.add_argument('--target_ip', type=str, help='IP address of the target to be scanned or file containing one IP address per line')
+    parser.add_argument('--target_ip', type=str,
+                        help='IP address of the target to be scanned or file containing one IP address per line')
     parser.add_argument('--task_name', type=str, help='Name of the task to be created and executed')
 
-    args = parser.parse_args()  # Argument parsing must be early in the main function
+    args = parser.parse_args()
 
     # Checks if script was executed using a non-root user
     if os.getuid() != 0:
         exit(colored(
             "You need to have root privileges to run this script.\nPlease try again, this time using 'sudo'. Exiting...",
             "red"))
-        
+
     # Tool logo
     print(colored("""                                  
                                                    @#####              
@@ -98,13 +123,17 @@ def main():
     update_cert()
 
     # Run OpenVAS Scan and get the path to the generated CSV report and task name
-    csv_path, task_name, hosts_count, high_count, medium_count, low_count= openvas_scan(path, username, password, target_name, target_ip, port_list_name, task_name, scan_config, scanner)
+    csv_path, task_name, hosts_count, high_count, medium_count, low_count = openvas_scan(path, username, password,
+                                                                                         target_name, target_ip,
+                                                                                         port_list_name, task_name,
+                                                                                         scan_config, scanner)
 
     # Generate the report using the generated CSV report path
     if csv_path:
         generate_report(csv_path, task_name, hosts_count, high_count, medium_count, low_count)
     else:
         print("Failed to generate the CSV report, skipping report generation.")
+
 
 if __name__ == "__main__":
     main()
