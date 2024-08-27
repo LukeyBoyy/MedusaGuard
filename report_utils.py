@@ -54,7 +54,7 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     medium_vulns = medium_count
     low_vulns = low_count
     hosts_scanned = hosts_count
-    top_vulns = df.sort_values(by='CVSS', ascending=False).head(10)
+    top_vulns = df.sort_values(by='CVSS', ascending=False)
 
     # Prepare data for pie chart
     labels = ["High", "Medium", "Low"]
