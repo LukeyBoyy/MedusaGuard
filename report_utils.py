@@ -2,9 +2,10 @@ import os
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
+from pandas import wide_to_long
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from datetime import datetime
@@ -12,7 +13,7 @@ from pathlib import Path
 from termcolor import colored
 
 
-def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, low_count):
+def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, low_count, os_count, apps_count):
     """
     Generates an executive report in PDF format based on the scan results.
 
@@ -54,13 +55,16 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     medium_vulns = medium_count
     low_vulns = low_count
     hosts_scanned = hosts_count
-    top_vulns = df.sort_values(by='CVSS', ascending=False).head(10)
+    top_vulns = df.sort_values(by='CVSS', ascending=False)
 
     # Prepare data for pie chart
     labels = ["High", "Medium", "Low"]
-    colors_list = ['#dc3841', '#FFA500', '#FFFF00']
+    colors_list = ['#d43f3a', '#fdc432', '#3eae49']
     sizes = [high_vulns, medium_vulns, low_vulns]
-    explode = [0.05, 0, 0]
+
+    bar_labels = ["Systems Scanned", "Applications Scanned", "Operating Systems Scanned"]
+    bar_sizes = [hosts_count, apps_count, os_count]
+    bar_colors = ['#33006f', '#430098', '#786ef8']
 
     # Custom function to show the values on the pie chart
     def absolute_value(val):
@@ -69,32 +73,37 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
 
     # Create a pie chart
     fig1, ax1 = plt.subplots(figsize=(3.5, 3.5))  # Smaller size
-    wedges, texts, autotexts = ax1.pie(
+    wedges, texts = ax1.pie(
         sizes,
         labels=labels,
-        explode=explode,
         colors=colors_list,
-        autopct=absolute_value,
         startangle=90,
-        wedgeprops=dict(edgecolor="black", linewidth=1.5),
-        textprops=dict(color="black", fontsize=12)
+        wedgeprops=dict(width=0.6, edgecolor='white'),
+        textprops=dict(color="black", fontsize=10)
     )
+
+    center_circle = plt.Circle((0, 0), 0.60, fc='white')
+    fig1.gca().add_artist(center_circle)
+
+    ax1.set_title('Vulnerabilities', fontsize=12, fontweight='bold', pad=15)
+    ax1.legend(wedges, labels, title="Severity", loc="center left", bbox_to_anchor=(1, 0, 0.5, 1), fontsize=10)
+
     plt.axis('equal')
     plt.savefig(pie_chart_path, bbox_inches='tight', dpi=300)
 
     # Create and save bar chart
     fig2, ax2 = plt.subplots(figsize=(3.5, 3.5))  # Smaller size
-    bars = ax2.bar(labels, sizes, color=colors_list, edgecolor='black', linewidth=1.5)
+    bars = ax2.bar(bar_labels, bar_sizes, color=bar_colors, edgecolor='none')
 
     # Add value labels on top of each bar with formatting
     for bar in bars:
         yval = bar.get_height()
         ax2.text(bar.get_x() + bar.get_width() / 2, yval + 0.5, f'{int(yval)}',
-                 ha='center', va='bottom', fontsize=12, color='black')
+                 ha='center', va='bottom', fontsize=10, color='black')
 
     # Add labels and format them
-    ax2.set_ylabel('Number of Vulnerabilities', fontsize=10)
-    ax2.set_xlabel('Severity Level', fontsize=10)
+    ax2.set_ylabel('Count', fontsize=10)
+    ax2.set_title('Scan Information', fontsize=12, fontweight='bold', pad=15)
 
     ax2.tick_params(axis='x', labelsize=10)
     ax2.tick_params(axis='y', labelsize=10)
@@ -103,9 +112,13 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     ax2.spines['left'].set_linewidth(1.5)
     ax2.spines['bottom'].set_linewidth(1.5)
 
-    # Add grid lines only on the y-axis
-    ax2.yaxis.grid(True, color='gray', linestyle='--', linewidth=0.5)
+    plt.xticks(rotation=45, ha='right')
+
+    ax2.yaxis.grid(False)
+    ax2.xaxis.grid(False)
     ax2.set_axisbelow(True)
+
+    plt.tight_layout()
 
     # Save the bar chart
     plt.savefig(bar_chart_path, bbox_inches='tight', dpi=300)
@@ -120,8 +133,8 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     styleN = styles["BodyText"]
     styleH = styles["Heading1"]
     styleTitle = styles["Title"]
-    styleH.fontSize = 14
-    styleH.leading = 16
+    styleH.fontSize = 15
+    styleH.leading = 17
 
     # Title Page
     elements.append(Paragraph("Executive Vulnerability Report", styleTitle))
@@ -149,6 +162,69 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
 
     # Key Findings
     elements.append(Paragraph("2. Key Findings", styleH))
+
+    # Custom styles
+    count_style = ParagraphStyle(
+        name="count",
+        alignment=1,  # Centered text
+        fontSize=18,
+        textColor=colors.whitesmoke,
+        spaceAfter=6,
+        fontName="Helvetica"  # Regular (non-bold) font
+    )
+
+    label_style = ParagraphStyle(
+        name="label",
+        alignment=1,  # Centered text
+        fontSize=10,
+        textColor=colors.whitesmoke,
+        spaceBefore=0,
+        fontName="Helvetica-Bold"  # Bold font for labels
+    )
+
+    # Define data for the table
+    data = [
+        [Paragraph(str(high_vulns), count_style), Paragraph(str(medium_vulns), count_style),
+         Paragraph(str(low_vulns), count_style)],
+        [Paragraph("HIGH", label_style), Paragraph("MEDIUM", label_style), Paragraph("LOW", label_style)],
+    ]
+
+    # Adjusted heights to make the table shorter
+    table = Table(data, colWidths=[2.7 * inch, 2 * inch, 2 * inch], rowHeights=[0.75 * inch, 0.4 * inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, 0), colors.HexColor("#E74C3C")),  # Red background for High
+        ('BACKGROUND', (1, 0), (1, 0), colors.HexColor("#F39C12")),  # Orange background for Medium
+        ('BACKGROUND', (2, 0), (2, 0), colors.HexColor("#2ECC71")),  # Green background for Low
+
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # White text color for counts
+        ('TEXTCOLOR', (0, 1), (-1, 1), colors.whitesmoke),  # White text color for labels
+
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center-align text in all cells
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Middle vertical alignment
+
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica'),  # Regular font for counts
+
+        ('BACKGROUND', (0, 1), (0, 1), colors.HexColor("#2C3E50")),  # Dark background for labels
+        ('BACKGROUND', (1, 1), (1, 1), colors.HexColor("#2C3E50")),  # Dark background for labels
+        ('BACKGROUND', (2, 1), (2, 1), colors.HexColor("#2C3E50")),  # Dark background for labels
+
+        ('BOX', (0, 0), (-1, -1), 0.75, colors.black),  # Thicker border around the table
+    ]))
+
+    # Add the heading
+    heading = Paragraph("Vulnerability Count", ParagraphStyle(
+        name="Heading1",
+        fontSize=10,
+        alignment=0,  # Aligned-left
+        textColor=colors.black,
+        spaceAfter=12,  # Space after the heading
+        fontName="Helvetica-Bold"
+    ))
+
+    elements.append(heading)
+    elements.append(table)
+    elements.append(Spacer(1, 0.75 * inch))
+    
     # Add the pie chart and bar chart side by side
     chart_table = Table(
         [
@@ -167,34 +243,96 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     ]))
     elements.append(chart_table)
 
-    data = [
-        ["Vulnerability Severity", "Count"],
-        [Paragraph('<font color="red">High</font>'), str(high_vulns)],
-        [Paragraph('<font color="orange">Medium</font>'), str(medium_vulns)],
-        [Paragraph('<font color="green">Low</font>'), str(low_vulns)],
-    ]
-    table = Table(data, colWidths=[2.3 * inch, 1.2 * inch])
-    table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#4F81BD")),  # Blue background for the header row
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # White text color for the header row
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center-align text in the header and data rows
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),  # Slightly reduced font size
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-        ('TOPPADDING', (0, 0), (-1, 0), 12),
-        ('BOTTOMPADDING', (1, 0), (-1, -1), 8),
-        ('TOPPADDING', (1, 0), (-1, -1), 8),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-        ('BACKGROUND', (0, 1), (-1, 1), colors.white),  # White background for the first data row
-        ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor("#f2f2f2")),
-        # Light gray background for the second data row
-        ('BACKGROUND', (0, 3), (-1, 3), colors.white),  # White background for the third data row
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.black),  # Black grid lines
-        ('BOX', (0, 0), (-1, -1), 0.75, colors.black),  # Thicker border around the table
-    ]))
-    elements.append(table)
-    elements.append(Spacer(1, 0.75 * inch))
+    ## Custom styles
+    #count_style = ParagraphStyle(
+    #    name="count",
+    #    alignment=1,  # Centered text
+    #    fontSize=24,
+    #    textColor=colors.whitesmoke,
+    #    spaceAfter=6,
+    #    fontName="Helvetica"  # Regular (non-bold) font
+    #)
+#
+    #label_style = ParagraphStyle(
+    #    name="label",
+    #    alignment=1,  # Centered text
+    #    fontSize=12,
+    #    textColor=colors.whitesmoke,
+    #    spaceBefore=0,
+    #    fontName="Helvetica-Bold"  # Bold font for labels
+    #)
+#
+    ## Define data for the table
+    #data = [
+    #    [Paragraph(str(high_vulns), count_style), Paragraph(str(medium_vulns), count_style),
+    #     Paragraph(str(low_vulns), count_style)],
+    #    [Paragraph("HIGH", label_style), Paragraph("MEDIUM", label_style), Paragraph("LOW", label_style)],
+    #]
+#
+    ## Adjusted heights to make the table shorter
+    #table = Table(data, colWidths=[2.5 * inch, 2 * inch, 2 * inch], rowHeights=[1 * inch, 0.5 * inch])
+    #table.setStyle(TableStyle([
+    #    ('BACKGROUND', (0, 0), (0, 0), colors.HexColor("#E74C3C")),  # Red background for High
+    #    ('BACKGROUND', (1, 0), (1, 0), colors.HexColor("#F39C12")),  # Orange background for Medium
+    #    ('BACKGROUND', (2, 0), (2, 0), colors.HexColor("#2ECC71")),  # Green background for Low
+#
+    #    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # White text color for counts
+    #    ('TEXTCOLOR', (0, 1), (-1, 1), colors.whitesmoke),  # White text color for labels
+#
+    #    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center-align text in all cells
+    #    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Middle vertical alignment
+#
+    #    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica'),  # Regular font for counts
+#
+    #    ('BACKGROUND', (0, 1), (0, 1), colors.HexColor("#34495E")),  # Dark background for labels
+    #    ('BACKGROUND', (1, 1), (1, 1), colors.HexColor("#34495E")),  # Dark background for labels
+    #    ('BACKGROUND', (2, 1), (2, 1), colors.HexColor("#34495E")),  # Dark background for labels
+#
+    #    ('BOX', (0, 0), (-1, -1), 0.75, colors.black),  # Thicker border around the table
+    #]))
+#
+    ## Add the heading
+    #heading = Paragraph("Vulnerability Count", ParagraphStyle(
+    #    name="Heading1",
+    #    fontSize=10,
+    #    alignment=0,  # Aligned-left
+    #    textColor=colors.black,
+    #    spaceAfter=12,  # Space after the heading
+    #    fontName="Helvetica-Bold"
+    #))
+#
+    #elements.append(heading)
+    #elements.append(table)
+    #elements.append(Spacer(1, 0.75 * inch))
+
+    #data = [
+    #    ["Vulnerability Severity", "Count"],
+    #    [Paragraph('<font color="red">High</font>'), str(high_vulns)],
+    #    [Paragraph('<font color="orange">Medium</font>'), str(medium_vulns)],
+    #    [Paragraph('<font color="green">Low</font>'), str(low_vulns)],
+    #]
+    #table = Table(data, colWidths=[2.3 * inch, 1.2 * inch])
+    #table.setStyle(TableStyle([
+    #    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2C3E50")),  # Blue background for the header row
+    #    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # White text color for the header row
+    #    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center-align text in the header and data rows
+    #    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+    #    ('FONTSIZE', (0, 0), (-1, -1), 10),  # Slightly reduced font size
+    #    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+    #    ('TOPPADDING', (0, 0), (-1, 0), 12),
+    #    ('BOTTOMPADDING', (1, 0), (-1, -1), 8),
+    #    ('TOPPADDING', (1, 0), (-1, -1), 8),
+    #    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+    #    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    #    ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor("#F2F3F4")),  # White background for the first data row
+    #    ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor("#EAECEE")),
+    #    # Light gray background for the second data row
+    #    ('BACKGROUND', (0, 3), (-1, 3), colors.HexColor("#F2F3F4")),  # White background for the third data row
+    #    ('GRID', (0, 0), (-1, -1), 0.5, colors.black),  # Black grid lines
+    #    ('BOX', (0, 0), (-1, -1), 0.75, colors.black),  # Thicker border around the table
+    #]))
+    #elements.append(table)
+    #elements.append(Spacer(1, 0.75 * inch))
 
     # Top 10 Critical Vulnerabilities sorted by CVSS score (highest to lowest)
     elements.append(Paragraph("3. Top 10 Vulnerabilities", styleH))
@@ -225,11 +363,11 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
 
     vuln_table = Table(vuln_data, colWidths=[1.3 * inch, 0.5 * inch, 2.5 * inch, 2.5 * inch])
     vuln_table_style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#4F81BD")),  # Blue background for the header row
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2C3E50")),  # Blue background for the header row
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # White text color for the header row
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),  # Left-align text for better readability
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),  # Reduced font size for better fit
+        ('FONTSIZE', (0, 0), (-1, -1), 10),  # Reduced font size for better fit
         ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
         ('TOPPADDING', (0, 0), (-1, 0), 10),
         ('BOTTOMPADDING', (1, 0), (-1, -1), 8),
@@ -244,9 +382,9 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     # Manually alternate row background colors
     for i in range(1, len(vuln_data)):
         if i % 2 == 0:
-            bg_color = colors.HexColor("#f2f2f2")  # Light gray
+            bg_color = colors.HexColor("#EAECEE")  # Light gray
         else:
-            bg_color = colors.white
+            bg_color = colors.HexColor("#F2F3F4")
         vuln_table_style.add('BACKGROUND', (0, i), (-1, i), bg_color)
 
     vuln_table.setStyle(vuln_table_style)
@@ -295,11 +433,11 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
 
     definitions_table = Table(definitions_data, colWidths=[2.3 * inch, 4.5 * inch])
     definitions_table_style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#4F81BD")),  # Blue background for the header row
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2C3E50")),  # Blue background for the header row
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # White text color for the header row
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),  # Left-align text
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
         ('TOPPADDING', (0, 0), (-1, 0), 10),
         ('BOTTOMPADDING', (1, 0), (-1, -1), 8),
@@ -313,9 +451,9 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     # Manually alternate row background colors for definitions table
     for i in range(1, len(definitions_data)):
         if i % 2 == 0:
-            bg_color = colors.HexColor("#f2f2f2")  # Light gray
+            bg_color = colors.HexColor("#EAECEE")  # Light gray
         else:
-            bg_color = colors.white
+            bg_color = colors.HexColor("#F2F3F4")
         definitions_table_style.add('BACKGROUND', (0, i), (-1, i), bg_color)
 
     definitions_table.setStyle(definitions_table_style)
@@ -349,11 +487,11 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
 
     actions_table = Table(actions_data, colWidths=[1.3 * inch, 2.5 * inch, 3 * inch])
     actions_table_style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#4F81BD")),  # Blue background for the header row
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2C3E50")),  # Blue background for the header row
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # White text color for the header row
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),  # Left-align text
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),  # Further reduced font size
+        ('FONTSIZE', (0, 0), (-1, -1), 10),  # Further reduced font size
         ('BOTTOMPADDING', (0, 0), (-1, 0), 10),  # Added padding
         ('TOPPADDING', (0, 0), (-1, 0), 10),  # Added padding
         ('BOTTOMPADDING', (1, 0), (-1, -1), 8),
@@ -367,9 +505,9 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     # Manually alternate row background colors for actions table
     for i in range(1, len(actions_data)):
         if i % 2 == 0:
-            bg_color = colors.HexColor("#f2f2f2")  # Light gray
+            bg_color = colors.HexColor("#EAECEE")  # Light gray
         else:
-            bg_color = colors.white
+            bg_color = colors.HexColor("#F2F3F4")
         actions_table_style.add('BACKGROUND', (0, i), (-1, i), bg_color)
 
     actions_table.setStyle(actions_table_style)
@@ -399,11 +537,11 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
                                  colWidths=[1.2 * inch, 0.7 * inch, 2.3 * inch, 2.6 * inch])
 
     detailed_vulns_table_style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#4F81BD")),  # Blue background for the header row
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2C3E50")),  # Blue background for the header row
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # White text color for the header row
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),  # Left-align text for better readability
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        ('FONTSIZE', (0, 0), (-1, -1), 8),  # Slightly reduced font size for better fit
+        ('FONTSIZE', (0, 0), (-1, -1), 10),  # Slightly reduced font size for better fit
         ('BOTTOMPADDING', (0, 0), (-1, 0), 10),  # Added padding
         ('TOPPADDING', (0, 0), (-1, 0), 10),  # Added padding
         ('BOTTOMPADDING', (1, 0), (-1, -1), 8),
@@ -418,9 +556,9 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     # Manually alternate row background colors
     for i in range(1, len(detailed_vulns_data)):
         if i % 2 == 0:
-            bg_color = colors.HexColor("#f2f2f2")  # Light gray
+            bg_color = colors.HexColor("#EAECEE")  # Light gray
         else:
-            bg_color = colors.white
+            bg_color = colors.HexColor("#F2F3F4")
         detailed_vulns_table_style.add('BACKGROUND', (0, i), (-1, i), bg_color)
 
     detailed_vulns_table.setStyle(detailed_vulns_table_style)

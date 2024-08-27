@@ -123,14 +123,14 @@ def main():
     update_cert()
 
     # Run OpenVAS Scan and get the path to the generated CSV report and task name
-    csv_path, task_name, hosts_count, high_count, medium_count, low_count = openvas_scan(path, username, password,
+    csv_path, task_name, hosts_count, high_count, medium_count, low_count, os_count, apps_count = openvas_scan(path, username, password,
                                                                                          target_name, target_ip,
                                                                                          port_list_name, task_name,
                                                                                          scan_config, scanner)
 
     # Generate the report using the generated CSV report path
     if csv_path:
-        generate_report(csv_path, task_name, hosts_count, high_count, medium_count, low_count)
+        generate_report(csv_path, task_name, hosts_count, high_count, medium_count, low_count, os_count, apps_count)
     else:
         print("Failed to generate the CSV report, skipping report generation.")
 

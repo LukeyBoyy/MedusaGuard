@@ -308,7 +308,7 @@ def openvas_scan(path, username, password, target_name, target_ip, port_list_nam
                                 colored(f" {csv_path}", attrs=['bold'])
                             )
 
-                            return str(csv_path), str(task_name), hosts_count, high_count, medium_count, low_count
+                            return str(csv_path), str(task_name), hosts_count, high_count, medium_count, low_count, apps_count, os_count
 
                 except Exception as e:
                     print(colored(f"[ERROR] Failed to download CSV report: {e}", "red"))
