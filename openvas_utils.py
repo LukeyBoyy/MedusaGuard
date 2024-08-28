@@ -102,7 +102,7 @@ def openvas_scan(path, username, password, target_name, target_ip, port_list_nam
 
     try:
         # Establish a Unix socket connection to the GVM, high timeout value is to prevent a timeout error
-        connection = UnixSocketConnection(path=path, timeout=3600)
+        connection = UnixSocketConnection(path=path, timeout=10000)
         with Gmp(connection=connection) as gmp:
             gmp.authenticate(username, password) # Authenticate with the GVM using provided credentials
 
@@ -163,7 +163,8 @@ def openvas_scan(path, username, password, target_name, target_ip, port_list_nam
             # Monitor the status of the task until it's completed
             task_status = ''
             while task_status not in ['Done', 'Stopped', 'Failed']:
-                time.sleep(10)
+                # Checks the status of the scan every 30 seconds, increase this value if timeout errrors persist
+                time.sleep(30)
                 task_response = gmp.get_task(task_id=taskid)
                 task_status_xml = ET.fromstring(task_response)
                 task_status = task_status_xml.find('.//status').text

@@ -1,0 +1,15 @@
+[ftp-anonymous-login] [tcp] [medium] 192.168.100.6:21
+[CVE-2011-2523] [tcp] [critical] 192.168.100.6:6200
+[CVE-2004-2687] [tcp] [high] 192.168.100.6:3632
+[openssh-detect] [tcp] [info] 192.168.100.6:22 ["SSH-2.0-OpenSSH_4.7p1 Debian-8ubuntu1"]
+[vnc-service-detect] [tcp] [info] 192.168.100.6:5900 ["RFB 003.003"]
+[smtp-service-detect] [tcp] [info] 192.168.100.6:25
+[CVE-2011-2523] [tcp] [critical] 192.168.100.28:6200
+[CVE-2004-2687] [tcp] [high] 192.168.100.28:3632
+[openssh-detect] [tcp] [info] 192.168.100.28:22 ["SSH-2.0-OpenSSH_4.7p1 Debian-8ubuntu1"]
+[vnc-service-detect] [tcp] [info] 192.168.100.28:5900 ["RFB 003.003"]
+[smtp-service-detect] [tcp] [info] 192.168.100.28:25
+[ftp-anonymous-login] [tcp] [medium] 192.168.100.28:21
+[esmtp-detect] [tcp] [info] 192.168.100.28:25
+[openssh-detect] [tcp] [info] 192.168.100.31:22 ["SSH-2.0-OpenSSH_6.0p1 Debian-4+deb7u7"]
+[rpcbind-portmapper-detect] [tcp] [info] 192.168.100.31:111

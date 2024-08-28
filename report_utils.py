@@ -2,7 +2,6 @@ import os
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
-from pandas import wide_to_long
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -28,9 +27,11 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
         high_count (int): Number of high-severity vulnerabilities found.
         medium_count (int): Number of medium-severity vulnerabilities found.
         low_count (int): Number of low-severity vulnerabilities found.
+        os_count (int): Number of operating systems scanned.
+        apps_count (int): Number of applications scanned.
     """
     # Timestamp for filenames
-    completion_time = time.strftime("%H-%M-%S_%Y-%m-%d")  # Updated timestamp format
+    completion_time = time.strftime("%H-%M-%S_%Y-%m-%d")
 
     # Paths for output files
     result_graphs_dir = "result_graphs"
@@ -55,6 +56,8 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     medium_vulns = medium_count
     low_vulns = low_count
     hosts_scanned = hosts_count
+    apps_count = apps_count
+    os_count = os_count
     top_vulns = df.sort_values(by='CVSS', ascending=False)
 
     # Prepare data for pie chart
@@ -62,17 +65,12 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     colors_list = ['#d43f3a', '#fdc432', '#3eae49']
     sizes = [high_vulns, medium_vulns, low_vulns]
 
-    bar_labels = ["Systems Scanned", "Applications Scanned", "Operating Systems Scanned"]
-    bar_sizes = [hosts_count, apps_count, os_count]
-    bar_colors = ['#33006f', '#430098', '#786ef8']
-
-    # Custom function to show the values on the pie chart
-    def absolute_value(val):
-        """Custom function to show absolute values on the pie chart."""
-        return f'{int(val / 100 * sum(sizes))}'
+    bar_legend_labels = ["Systems", "Applications", "Operating Systems"]
+    bar_sizes = [hosts_count, os_count, apps_count]
+    bar_colors = ['#bbeeff', '#3366ff', '#77aaff']
 
     # Create a pie chart
-    fig1, ax1 = plt.subplots(figsize=(3.5, 3.5))  # Smaller size
+    fig1, ax1 = plt.subplots(figsize=(3.5, 3.5))
     wedges, texts = ax1.pie(
         sizes,
         labels=labels,
@@ -93,7 +91,7 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
 
     # Create and save bar chart
     fig2, ax2 = plt.subplots(figsize=(3.5, 3.5))  # Smaller size
-    bars = ax2.bar(bar_labels, bar_sizes, color=bar_colors, edgecolor='none')
+    bars = ax2.bar(bar_legend_labels, bar_sizes, color=bar_colors, edgecolor='none')
 
     # Add value labels on top of each bar with formatting
     for bar in bars:
@@ -112,11 +110,14 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     ax2.spines['left'].set_linewidth(1.5)
     ax2.spines['bottom'].set_linewidth(1.5)
 
-    plt.xticks(rotation=45, ha='right')
+    # Removes x-axis label.
+    ax2.set_xticklabels([])
 
     ax2.yaxis.grid(False)
     ax2.xaxis.grid(False)
     ax2.set_axisbelow(True)
+
+    ax2.legend(bars, bar_legend_labels, title="Categories", loc="upper left", fontsize=8, title_fontsize=10)
 
     plt.tight_layout()
 
@@ -149,14 +150,31 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
 
     # Executive Summary
     elements.append(Paragraph("1. Executive Summary", styleH))
-    exec_summary = (
-        f"The purpose of this vulnerability scan was to identify weaknesses within our IT infrastructure "
-        f"that could be exploited by attackers, potentially leading to financial loss, regulatory penalties, "
-        f"or damage to our reputation. Of the {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, "
-        f"with {high_vulns} categorized as high, posing the most significant risk. Immediate remediation of any high vulnerabilities "
-        f"identified is necessary to avoid potential business disruptions and ensure the continued trust of our customers. "
-        f"The report provides detailed findings and actionable recommendations to mitigate these risks, safeguarding our operations."
-    )
+
+    if high_count >= 3:
+        exec_summary = (
+            f"The purpose of this vulnerability scan was to identify weaknesses within our IT infrastructure "
+            f"that could be exploited by attackers, potentially leading to financial loss, regulatory penalties, "
+            f"or damage to our reputation. Of the {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, "
+            f"with {high_vulns} categorized as high, posing the most significant risk. Immediate remediation of any high vulnerabilities "
+            f"identified is necessary to avoid potential business disruptions and ensure the continued trust of our customers. "
+            f"The report provides detailed findings and actionable recommendations to mitigate these risks, safeguarding our operations."
+        )
+    elif high_count > 4:
+        exec_summary = (
+            f"The vulnerability scan identified several high-risk vulnerabilities within our IT infrastructure. "
+            f"Out of the {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, with {high_vulns} being high-risk. "
+            f"These should be addressed promptly to avoid potential security breaches."
+            f"The report provides detailed findings and actionable recommendations to mitigate these risks, safeguarding our operations."
+        )
+    else:
+        exec_summary = (
+            f"The vulnerability scan did not identify any high-risk vulnerabilities. "
+            f"Out of the {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, with none classified as high risk "
+            f"{medium_vulns} classified as medium risk, and {low_vulns} classified as low risk. Therefore, our IT infrastructure shows "
+            f"a strong security posture, though continuous monitoring and improvement are still recommended. "
+        )
+
     elements.append(Paragraph(exec_summary, styleN))
     elements.append(Spacer(1, 0.5 * inch))
 
@@ -176,7 +194,7 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     label_style = ParagraphStyle(
         name="label",
         alignment=1,  # Centered text
-        fontSize=10,
+        fontSize=8,
         textColor=colors.whitesmoke,
         spaceBefore=0,
         fontName="Helvetica-Bold"  # Bold font for labels
@@ -190,7 +208,7 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     ]
 
     # Adjusted heights to make the table shorter
-    table = Table(data, colWidths=[2.7 * inch, 2 * inch, 2 * inch], rowHeights=[0.75 * inch, 0.4 * inch])
+    table = Table(data, colWidths=[2.25 * inch, 2.25 * inch, 2.25 * inch], rowHeights=[0.75 * inch, 0.4 * inch])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (0, 0), colors.HexColor("#E74C3C")),  # Red background for High
         ('BACKGROUND', (1, 0), (1, 0), colors.HexColor("#F39C12")),  # Orange background for Medium
@@ -208,29 +226,29 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
         ('BACKGROUND', (1, 1), (1, 1), colors.HexColor("#2C3E50")),  # Dark background for labels
         ('BACKGROUND', (2, 1), (2, 1), colors.HexColor("#2C3E50")),  # Dark background for labels
 
-        ('BOX', (0, 0), (-1, -1), 0.75, colors.black),  # Thicker border around the table
+        ('BOX', (0, 0), (-1, -1), 0.75, colors.whitesmoke),  # Thicker border around the table
     ]))
 
     # Add the heading
-    heading = Paragraph("Vulnerability Count", ParagraphStyle(
+    heading = Paragraph("Vulnerability count:", ParagraphStyle(
         name="Heading1",
         fontSize=10,
         alignment=0,  # Aligned-left
         textColor=colors.black,
         spaceAfter=12,  # Space after the heading
-        fontName="Helvetica-Bold"
+        fontName="Helvetica"
     ))
 
     elements.append(heading)
     elements.append(table)
-    elements.append(Spacer(1, 0.75 * inch))
+    elements.append(Spacer(1, 0.25 * inch))
     
     # Add the pie chart and bar chart side by side
     chart_table = Table(
         [
             [
-                Image(pie_chart_path, width=2.50 * inch, height=2.50 * inch),  # Smaller size
-                Image(bar_chart_path, width=2.50 * inch, height=2.50 * inch)  # Smaller size
+                Image(pie_chart_path, width=2.50 * inch, height=2 * inch),
+                Image(bar_chart_path, width=2.50 * inch, height=2 * inch)
             ]
         ],
         colWidths=[2.875 * inch, 2.875 * inch]
@@ -242,100 +260,17 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
         ('TOPPADDING', (0, 0), (-1, -1), 12)
     ]))
     elements.append(chart_table)
-
-    ## Custom styles
-    #count_style = ParagraphStyle(
-    #    name="count",
-    #    alignment=1,  # Centered text
-    #    fontSize=24,
-    #    textColor=colors.whitesmoke,
-    #    spaceAfter=6,
-    #    fontName="Helvetica"  # Regular (non-bold) font
-    #)
-#
-    #label_style = ParagraphStyle(
-    #    name="label",
-    #    alignment=1,  # Centered text
-    #    fontSize=12,
-    #    textColor=colors.whitesmoke,
-    #    spaceBefore=0,
-    #    fontName="Helvetica-Bold"  # Bold font for labels
-    #)
-#
-    ## Define data for the table
-    #data = [
-    #    [Paragraph(str(high_vulns), count_style), Paragraph(str(medium_vulns), count_style),
-    #     Paragraph(str(low_vulns), count_style)],
-    #    [Paragraph("HIGH", label_style), Paragraph("MEDIUM", label_style), Paragraph("LOW", label_style)],
-    #]
-#
-    ## Adjusted heights to make the table shorter
-    #table = Table(data, colWidths=[2.5 * inch, 2 * inch, 2 * inch], rowHeights=[1 * inch, 0.5 * inch])
-    #table.setStyle(TableStyle([
-    #    ('BACKGROUND', (0, 0), (0, 0), colors.HexColor("#E74C3C")),  # Red background for High
-    #    ('BACKGROUND', (1, 0), (1, 0), colors.HexColor("#F39C12")),  # Orange background for Medium
-    #    ('BACKGROUND', (2, 0), (2, 0), colors.HexColor("#2ECC71")),  # Green background for Low
-#
-    #    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # White text color for counts
-    #    ('TEXTCOLOR', (0, 1), (-1, 1), colors.whitesmoke),  # White text color for labels
-#
-    #    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center-align text in all cells
-    #    ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Middle vertical alignment
-#
-    #    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica'),  # Regular font for counts
-#
-    #    ('BACKGROUND', (0, 1), (0, 1), colors.HexColor("#34495E")),  # Dark background for labels
-    #    ('BACKGROUND', (1, 1), (1, 1), colors.HexColor("#34495E")),  # Dark background for labels
-    #    ('BACKGROUND', (2, 1), (2, 1), colors.HexColor("#34495E")),  # Dark background for labels
-#
-    #    ('BOX', (0, 0), (-1, -1), 0.75, colors.black),  # Thicker border around the table
-    #]))
-#
-    ## Add the heading
-    #heading = Paragraph("Vulnerability Count", ParagraphStyle(
-    #    name="Heading1",
-    #    fontSize=10,
-    #    alignment=0,  # Aligned-left
-    #    textColor=colors.black,
-    #    spaceAfter=12,  # Space after the heading
-    #    fontName="Helvetica-Bold"
-    #))
-#
-    #elements.append(heading)
-    #elements.append(table)
-    #elements.append(Spacer(1, 0.75 * inch))
-
-    #data = [
-    #    ["Vulnerability Severity", "Count"],
-    #    [Paragraph('<font color="red">High</font>'), str(high_vulns)],
-    #    [Paragraph('<font color="orange">Medium</font>'), str(medium_vulns)],
-    #    [Paragraph('<font color="green">Low</font>'), str(low_vulns)],
-    #]
-    #table = Table(data, colWidths=[2.3 * inch, 1.2 * inch])
-    #table.setStyle(TableStyle([
-    #    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#2C3E50")),  # Blue background for the header row
-    #    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),  # White text color for the header row
-    #    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # Center-align text in the header and data rows
-    #    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-    #    ('FONTSIZE', (0, 0), (-1, -1), 10),  # Slightly reduced font size
-    #    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-    #    ('TOPPADDING', (0, 0), (-1, 0), 12),
-    #    ('BOTTOMPADDING', (1, 0), (-1, -1), 8),
-    #    ('TOPPADDING', (1, 0), (-1, -1), 8),
-    #    ('LEFTPADDING', (0, 0), (-1, -1), 6),
-    #    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-    #    ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor("#F2F3F4")),  # White background for the first data row
-    #    ('BACKGROUND', (0, 2), (-1, 2), colors.HexColor("#EAECEE")),
-    #    # Light gray background for the second data row
-    #    ('BACKGROUND', (0, 3), (-1, 3), colors.HexColor("#F2F3F4")),  # White background for the third data row
-    #    ('GRID', (0, 0), (-1, -1), 0.5, colors.black),  # Black grid lines
-    #    ('BOX', (0, 0), (-1, -1), 0.75, colors.black),  # Thicker border around the table
-    #]))
-    #elements.append(table)
-    #elements.append(Spacer(1, 0.75 * inch))
+    elements.append(Spacer(1, 0.5 * inch))
 
     # Top 10 Critical Vulnerabilities sorted by CVSS score (highest to lowest)
     elements.append(Paragraph("3. Top 10 Vulnerabilities", styleH))
+    top_10_text = (
+        "The following table details the top 10 most critical vulnerabilities identified in the scan. It is ordered from "
+        "most significant risk to least significant risk, with a CVSS score of 10.0 being the highest score possible "
+        "awarded to vulnerabilities that pose a major risk. Please refer to the definitions table in the appendix "
+        "if any of the terms are unknown to you."
+    )
+    elements.append(Paragraph(top_10_text, styleN))
     vuln_data = [["Vulnerability", "CVSS", "Impact", "Remediation"]]
 
     # Set to track unique vulnerabilities
@@ -403,7 +338,7 @@ def generate_report(csv_path, task_name, hosts_count, high_count, medium_count, 
     # Conclusion
     elements.append(Paragraph("5. Conclusion", styleH))
     conclusion = (
-        "Addressing these vulnerabilities will help mitigate significant risks to the organization and ensure compliance with "
+        "Addressing these vulnerabilities will help mitigate risks to the organization and ensure compliance with "
         "industry standards. We recommend taking immediate action on any critical vulnerabilities and implementing long-term "
         "strategies to improve our security framework."
     )

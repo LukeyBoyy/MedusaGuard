@@ -39,6 +39,7 @@ def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
     with open(nuclei_target_file, 'r') as file:
         nuclei_targets = [line.strip() for line in file if line.strip()]
 
+    # Commands to execute
     nuclei_commands = {
         "network": "nuclei -target {} -t network/ -o {}"
     }
