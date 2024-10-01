@@ -1,4 +1,4 @@
-![c0621b1c-2767-4421-bf71-15418ffdc945](https://github.com/user-attachments/assets/8ecc3ab2-8a87-4282-9f55-9b6cd4ed27dd)
+![Medusa Guard Banner](https://github.com/user-attachments/assets/ba744d99-b6a2-4f27-adbd-1ef93332d052)
 
 ##   **Automated Vulnerability Detection and Exploitation System for Enhanced Security**
 
