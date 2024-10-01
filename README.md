@@ -1,6 +1,6 @@
 ![Medusa Guard Banner](https://github.com/user-attachments/assets/ba744d99-b6a2-4f27-adbd-1ef93332d052)
 
-##   **Automated Vulnerability Detection and Exploitation System for Enhanced Security**
+##   **Automated Vulnerability Detection and Exploitation Tool for Enhanced Security**
 
                                   
 
@@ -8,7 +8,7 @@
 
 This project focuses on developing an automated vulnerability detection and exploitation system designed to safeguard enterprise environments by identifying and exploiting security vulnerabilities. By leveraging automation, the system continuously monitors and mitigates potential weaknesses before they can be exploited by malicious actors.
 
-The system integrates well-established open-source tools - Nikto, Greenbone OpenVAS, Nuclei, and Metasploit — to perform comprehensive vulnerability scanning, management, and controlled exploitation. It is designed to prioritise security while maintaining system availability and integrity, ensuring that no harmful payloads are delivered during scans.
+The system integrates well-established open-source tools - **Nikto, Greenbone OpenVAS, Nuclei, and Metasploit** — to perform comprehensive vulnerability scanning, management, and controlled exploitation. It is designed to prioritise security while maintaining system availability and integrity, ensuring that no harmful payloads are delivered during scans.
 
 ### **Technologies Used**
 
@@ -21,9 +21,9 @@ The system integrates well-established open-source tools - Nikto, Greenbone Open
 4. **Metasploit Framework:** Utilised to verify exploitability by safely testing identified vulnerabilities with real-time controlled exploitation.
 
 ### **Key Features**
-- **Advanced Exploitation Automation:** The system automatically links identified vulnerabilities to known exploits from various tools, reducing manual effort while enhancing accuracy in exploit validation.
-
 - **Periodic Automated Testing:** The system supports automated scheduling of vulnerability scans and exploitation tests at regular intervals, providing continuous network monitoring for new vulnerabilities.
+
+- **Advanced Exploitation Automation:** The system automatically links identified vulnerabilities to known exploits from various tools, reducing manual effort while enhancing accuracy in exploit validation.
 
 - **Interactive Dashboard for Reports:** A GUI-based dashboard offers real-time insights into identified vulnerabilities, trends, and remediation steps. Reports are accessible in both technical and non-technical formats, making them useful for both security teams and executive stakeholders.
 
