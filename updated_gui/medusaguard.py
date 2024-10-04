@@ -142,6 +142,9 @@ def stop_scheduled_scan():
 
     print("Scheduler and scan process stopped.")
 
+    # Navigates back to the dashboard screen
+    show_frame(dashboard_frame)
+
 
 # Function to open the calendar and select a date
 def open_calendar():
@@ -213,6 +216,8 @@ def save_schedule_config():
         messagebox.showerror("Error", f"Failed to save the configuration: {str(e)}")
 
     comment_input.delete(0, 'end')
+
+    start_scheduled_scan()
     show_frame(dashboard_frame)
 
 
@@ -629,41 +634,41 @@ interval_var.set("Daily")
 interval_options = ["Daily", "Weekly", "Fortnightly", "Monthly"]
 
 # Sidebar buttons with hover effects and commands
-button_image_1 = PhotoImage(
+stop_scan_image = PhotoImage(
     file=relative_to_assets("button_1.png", 2))
-button_1 = Button(
+stop_scan_button = Button(
     schedule_frame,
-    image=button_image_1,
+    image=stop_scan_image,
     borderwidth=0,
     highlightthickness=0,
     command=lambda: open_directory('custom_reports'),
     relief="flat"
 )
-button_1.place(
+stop_scan_button.place(
     x=24.0,
     y=209.0,
     width=248.0,
     height=44.0
 )
 
-button_image_hover_1 = PhotoImage(
+stop_scan_button_hover_image = PhotoImage(
     file=relative_to_assets("button_hover_1.png", 2))
 
 
 def button_1_hover(e):
-    button_1.config(
-        image=button_image_hover_1
+    stop_scan_button.config(
+        image=stop_scan_button_hover_image
     )
 
 
 def button_1_leave(e):
-    button_1.config(
-        image=button_image_1
+    stop_scan_button.config(
+        image=stop_scan_image
     )
 
 
-button_1.bind('<Enter>', button_1_hover)
-button_1.bind('<Leave>', button_1_leave)
+stop_scan_button.bind('<Enter>', button_1_hover)
+stop_scan_button.bind('<Leave>', button_1_leave)
 
 # Sidebar greenbone reports link
 button_image_2 = PhotoImage(
@@ -1096,7 +1101,7 @@ button_13 = Button(
     image=button_image_13,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: show_frame(dashboard_frame),
+    command=stop_scheduled_scan,
     relief="flat"
 )
 button_13.place(
@@ -1142,7 +1147,6 @@ button_14.place(
     width=123.0,
     height=73.0
 )
-
 button_image_hover_14 = PhotoImage(
     file=relative_to_assets("button_hover_13.png", 2))
 
@@ -1433,7 +1437,6 @@ def button_24_leave(e):
     button_24.config(
         image=button_image_24
     )
-
 
 # Apply Tooltip to button_24
 tooltip_24 = ToolTip(button_24, """Required section, enables you to have this scheduled scan run
@@ -3435,7 +3438,7 @@ dashboard_button_17 = Button(
     image=dashboard_button_image_17,
     borderwidth=0,
     highlightthickness=0,
-    command=stop_scheduled_scan,
+    command=lambda: print("stop scan button clicked"),
     relief="flat"
 )
 dashboard_button_17.place(
@@ -3472,7 +3475,7 @@ dashboard_button_18 = Button(
     image=dashboard_button_image_18,
     borderwidth=0,
     highlightthickness=0,
-    command=start_scheduled_scan,
+    command=lambda: print("start scan button clicked"),
     relief="flat"
 )
 dashboard_button_18.place(
