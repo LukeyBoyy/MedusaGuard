@@ -20,6 +20,7 @@ from tkinter import (
     Toplevel,
     Label,
     Frame,
+    Text,
     PhotoImage,
     StringVar,
     Spinbox,
@@ -27,7 +28,6 @@ from tkinter import (
     Scrollbar,
     OptionMenu,
 )
-
 
 # Dynamically get the path of the directory where the script is located
 BASE_PATH = Path(__file__).resolve().parent
@@ -62,11 +62,13 @@ def relative_to_assets(path: str, frame_number: int = 0) -> Path:
     else:
         raise ValueError("Invalid frame number. Must be 0 or 1.")
 
+
 # Global flag to control the scheduler
 running_scheduler = True
 
 # Process object for the scan (to allow termination)
 scan_process = None
+
 
 # Function to run the scan (e.g., executing the main.py script)
 def run_scan():
@@ -74,7 +76,8 @@ def run_scan():
     print("Starting the scan now...")
     scan_process = subprocess.Popen(["python3", "main.py"])  # Modify if needed
     scan_process.wait()  # Wait for the scan process to finish
-    
+
+
 # Function to schedule the scan based on schedule_config.JSON configuration
 def start_scheduled_scan():
     global running_scheduler
@@ -82,7 +85,7 @@ def start_scheduled_scan():
         # Load the schedule config
         with open("schedule_config.json", "r") as config_file:
             schedule_data = json.load(config_file)
-        
+
         # Extract scheduling information
         comment = schedule_data.get("Comment", "No Comment")
         scan_date = schedule_data.get("Date", "Not Selected")
@@ -114,13 +117,15 @@ def start_scheduled_scan():
     except Exception as e:
         print(f"Error reading schedule config: {str(e)}")
 
+
 # Function to continuously check for scheduled tasks
 def run_scheduler():
     global running_scheduler
     while running_scheduler:
         schedule.run_pending()
         time.sleep(31)
-        
+
+
 # Function to stop the scheduler and the scan process
 def stop_scheduled_scan():
     global running_scheduler, scan_process
@@ -136,13 +141,15 @@ def stop_scheduled_scan():
         scan_process = None
 
     print("Scheduler and scan process stopped.")
-        
+
+
 # Function to open the calendar and select a date
 def open_calendar():
     """
     Opens a Toplevel window containing a Calendar widget for the user to select a date.
     The selected date is stored in 'date_display_var' and the summary is updated.
     """
+
     def get_selected_date():
         selected_date = cal.get_date()
         date_display_var.set(selected_date)
@@ -155,6 +162,7 @@ def open_calendar():
     select_btn = Button(top, text="Select", command=get_selected_date)
     select_btn.pack()
 
+
 # Function that gets called when button_27 is pressed
 def handle_comment_input():
     """
@@ -164,6 +172,7 @@ def handle_comment_input():
     comment_text = comment_input.get()
     print(f"Comment entered: {comment_text}")
     update_summary()
+
 
 # Function to handle saving the schedule config
 def save_schedule_config():
@@ -204,7 +213,8 @@ def save_schedule_config():
         messagebox.showerror("Error", f"Failed to save the configuration: {str(e)}")
 
     comment_input.delete(0, 'end')
-    show_frame(dashbard_frame)
+    show_frame(dashboard_frame)
+
 
 def calculate_interval_days(interval_value):
     """
@@ -227,12 +237,14 @@ def calculate_interval_days(interval_value):
     else:
         return 1
 
+
 # Function to open time selection
 def open_time_selector():
     """
     Opens a Toplevel window with Spinbox widgets for hours and minutes to select a time.
     The selected time is stored in 'time_display_var' and the summary is updated.
     """
+
     def update_time():
         selected_time = f"{hour_spinbox.get()}:{minute_spinbox.get()}"
         time_display_var.set(selected_time)
@@ -252,12 +264,14 @@ def open_time_selector():
     select_btn = Button(top, text="Select Time", command=update_time)
     select_btn.pack()
 
+
 # Scrollable timezone selection dialog
 def select_timezone():
     """
     Opens a Toplevel window with a scrollable Listbox containing all available timezones.
     The selected timezone is stored in 'timezone_display_var' and the summary is updated.
     """
+
     def on_select(event):
         selected = listbox.get(listbox.curselection())
         timezone_display_var.set(selected)
@@ -278,6 +292,7 @@ def select_timezone():
     scrollbar.config(command=listbox.yview)
     listbox.bind("<<ListboxSelect>>", on_select)
 
+
 # Function to handle showing the Repeat Interval OptionMenu when button_21 is clicked
 def show_interval_menu():
     """
@@ -288,6 +303,7 @@ def show_interval_menu():
         window, interval_var, *interval_options, command=select_repeat_interval
     )
     interval_menu.place(x=660.0, y=320.0, width=150.0, height=30.0)
+
 
 # Function to handle Repeat Interval Selection
 def select_repeat_interval(selected_option):
@@ -304,6 +320,7 @@ def select_repeat_interval(selected_option):
         if isinstance(widget, OptionMenu):
             widget.destroy()
 
+
 # Function to update the summary section on button_23
 def update_summary():
     """
@@ -316,6 +333,7 @@ def update_summary():
         f"Repeat Every: {repeat_interval_display_var.get() if repeat_interval_display_var.get() else 'Not Selected'}"
     )
     button_23.config(text=summary_text)
+
 
 def add_placeholder(entry, placeholder_text):
     """
@@ -341,11 +359,13 @@ def add_placeholder(entry, placeholder_text):
     entry.bind("<FocusIn>", on_focus_in)
     entry.bind("<FocusOut>", on_focus_out)
 
+
 class ToolTip:
     """
     A class to create and manage tooltips for widgets.
     Displays a small popup with helpful text when the user hovers over a widget.
     """
+
     def __init__(self, widget, text):
         """
         Initializes the tooltip for a given widget.
@@ -400,6 +420,7 @@ class ToolTip:
             self.tooltip_window.destroy()
             self.tooltip_window = None
 
+
 def open_directory(path: str):
     """
     Opens the specified directory using the default file explorer.
@@ -411,6 +432,7 @@ def open_directory(path: str):
         os.startfile(path)
     else:
         subprocess.Popen(['xdg-open', path])
+
 
 def save_dark_popup():
     """
@@ -432,6 +454,7 @@ def save_dark_popup():
 
     ok_button = ttk.Button(popup, text="OK", command=popup.destroy)
     ok_button.pack(pady=10)
+
 
 def save_to_config():
     """
@@ -484,6 +507,7 @@ def save_to_config():
     # Show success popup
     save_dark_popup()
 
+
 def clear_entries():
     """
     Clears all input fields in the configuration editor.
@@ -498,6 +522,7 @@ def clear_entries():
     edit_conf_scan_config.delete(0, 'end')
     edit_conf_scanner.delete(0, 'end')
 
+
 def show_frame(frame):
     """
     Raises the specified frame to the top of the stacking order.
@@ -506,6 +531,7 @@ def show_frame(frame):
         frame (tkinter.Frame): The frame to display.
     """
     frame.tkraise()
+
 
 # Initialize the main application window
 window = Tk()
@@ -527,16 +553,16 @@ window.iconphoto(False, logo_image)
 # Edit configuration frame
 edit_config_frame = Frame(window, bg="#121212")
 # Dashboard/Main frame
-dashbard_frame = Frame(window, bg="#121212")
+dashboard_frame = Frame(window, bg="#121212")
 # Scan scheduler frame
 schedule_frame = Frame(window, bg="#121212")
 
 # Place all frames in the same location; only the raised frame will be visible
-for frame in (edit_config_frame, dashbard_frame, schedule_frame):
+for frame in (edit_config_frame, dashboard_frame, schedule_frame):
     frame.place(relwidth=1, relheight=1)
 
 # Initially display the dashboard frame
-show_frame(dashbard_frame)
+show_frame(dashboard_frame)
 
 # --- Schedule Scan Page ---
 # Create the canvas for the schedule frame
@@ -623,14 +649,18 @@ button_1.place(
 button_image_hover_1 = PhotoImage(
     file=relative_to_assets("button_hover_1.png", 2))
 
+
 def button_1_hover(e):
     button_1.config(
         image=button_image_hover_1
     )
+
+
 def button_1_leave(e):
     button_1.config(
         image=button_image_1
     )
+
 
 button_1.bind('<Enter>', button_1_hover)
 button_1.bind('<Leave>', button_1_leave)
@@ -656,14 +686,18 @@ button_2.place(
 button_image_hover_2 = PhotoImage(
     file=relative_to_assets("button_hover_2.png", 2))
 
+
 def button_2_hover(e):
     button_2.config(
         image=button_image_hover_2
     )
+
+
 def button_2_leave(e):
     button_2.config(
         image=button_image_2
     )
+
 
 button_2.bind('<Enter>', button_2_hover)
 button_2.bind('<Leave>', button_2_leave)
@@ -689,14 +723,18 @@ button_3.place(
 button_image_hover_3 = PhotoImage(
     file=relative_to_assets("button_hover_3.png", 2))
 
+
 def button_3_hover(e):
     button_3.config(
         image=button_image_hover_3
     )
+
+
 def button_3_leave(e):
     button_3.config(
         image=button_image_3
     )
+
 
 button_3.bind('<Enter>', button_3_hover)
 button_3.bind('<Leave>', button_3_leave)
@@ -722,14 +760,18 @@ button_4.place(
 button_image_hover_4 = PhotoImage(
     file=relative_to_assets("button_hover_4.png", 2))
 
+
 def button_4_hover(e):
     button_4.config(
         image=button_image_hover_4
     )
+
+
 def button_4_leave(e):
     button_4.config(
         image=button_image_4
     )
+
 
 button_4.bind('<Enter>', button_4_hover)
 button_4.bind('<Leave>', button_4_leave)
@@ -755,14 +797,18 @@ button_5.place(
 button_image_hover_5 = PhotoImage(
     file=relative_to_assets("button_hover_5.png", 2))
 
+
 def button_5_hover(e):
     button_5.config(
         image=button_image_hover_5
     )
+
+
 def button_5_leave(e):
     button_5.config(
         image=button_image_5
     )
+
 
 button_5.bind('<Enter>', button_5_hover)
 button_5.bind('<Leave>', button_5_leave)
@@ -788,14 +834,18 @@ button_6.place(
 button_image_hover_6 = PhotoImage(
     file=relative_to_assets("button_hover_6.png", 2))
 
+
 def button_6_hover(e):
     button_6.config(
         image=button_image_hover_6
     )
+
+
 def button_6_leave(e):
     button_6.config(
         image=button_image_6
     )
+
 
 button_6.bind('<Enter>', button_6_hover)
 button_6.bind('<Leave>', button_6_leave)
@@ -821,14 +871,18 @@ button_7.place(
 button_image_hover_7 = PhotoImage(
     file=relative_to_assets("button_hover_7.png", 2))
 
+
 def button_7_hover(e):
     button_7.config(
         image=button_image_hover_7
     )
+
+
 def button_7_leave(e):
     button_7.config(
         image=button_image_7
     )
+
 
 button_7.bind('<Enter>', button_7_hover)
 button_7.bind('<Leave>', button_7_leave)
@@ -854,14 +908,18 @@ button_8.place(
 button_image_hover_8 = PhotoImage(
     file=relative_to_assets("button_hover_8.png", 2))
 
+
 def button_8_hover(e):
     button_8.config(
         image=button_image_hover_8
     )
+
+
 def button_8_leave(e):
     button_8.config(
         image=button_image_8
     )
+
 
 button_8.bind('<Enter>', button_8_hover)
 button_8.bind('<Leave>', button_8_leave)
@@ -928,7 +986,7 @@ button_10 = Button(
     image=button_image_10,
     borderwidth=0,
     highlightthickness=0,
-    #command=lambda: print("button_10 clicked"),
+    # command=lambda: print("button_10 clicked"),
     relief="flat"
 )
 button_10.place(
@@ -941,14 +999,18 @@ button_10.place(
 button_image_hover_10 = PhotoImage(
     file=relative_to_assets("button_hover_9.png", 2))
 
+
 def button_10_hover(e):
     button_10.config(
         image=button_image_hover_10
     )
+
+
 def button_10_leave(e):
     button_10.config(
         image=button_image_10
     )
+
 
 button_10.bind('<Enter>', button_10_hover)
 button_10.bind('<Leave>', button_10_leave)
@@ -973,14 +1035,18 @@ button_11.place(
 button_image_hover_11 = PhotoImage(
     file=relative_to_assets("button_hover_10.png", 2))
 
+
 def button_11_hover(e):
     button_11.config(
         image=button_image_hover_11
     )
+
+
 def button_11_leave(e):
     button_11.config(
         image=button_image_11
     )
+
 
 button_11.bind('<Enter>', button_11_hover)
 button_11.bind('<Leave>', button_11_leave)
@@ -993,7 +1059,7 @@ button_12 = Button(
     image=button_image_12,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: show_frame(dashbard_frame),
+    command=lambda: show_frame(dashboard_frame),
     relief="flat"
 )
 button_12.place(
@@ -1006,14 +1072,18 @@ button_12.place(
 button_image_hover_12 = PhotoImage(
     file=relative_to_assets("button_hover_11.png", 2))
 
+
 def button_12_hover(e):
     button_12.config(
         image=button_image_hover_12
     )
+
+
 def button_12_leave(e):
     button_12.config(
         image=button_image_12
     )
+
 
 button_12.bind('<Enter>', button_12_hover)
 button_12.bind('<Leave>', button_12_leave)
@@ -1026,7 +1096,7 @@ button_13 = Button(
     image=button_image_13,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: show_frame(dashbard_frame),
+    command=lambda: show_frame(dashboard_frame),
     relief="flat"
 )
 button_13.place(
@@ -1039,14 +1109,18 @@ button_13.place(
 button_image_hover_13 = PhotoImage(
     file=relative_to_assets("button_hover_12.png", 2))
 
+
 def button_13_hover(e):
     button_13.config(
         image=button_image_hover_13
     )
+
+
 def button_13_leave(e):
     button_13.config(
         image=button_image_13
     )
+
 
 button_13.bind('<Enter>', button_13_hover)
 button_13.bind('<Leave>', button_13_leave)
@@ -1072,14 +1146,18 @@ button_14.place(
 button_image_hover_14 = PhotoImage(
     file=relative_to_assets("button_hover_13.png", 2))
 
+
 def button_14_hover(e):
     button_14.config(
         image=button_image_hover_14
     )
+
+
 def button_14_leave(e):
     button_14.config(
         image=button_image_14
     )
+
 
 button_14.bind('<Enter>', button_14_hover)
 button_14.bind('<Leave>', button_14_leave)
@@ -1121,14 +1199,18 @@ button_16.place(
 button_image_hover_16 = PhotoImage(
     file=relative_to_assets("button_hover_14.png", 2))
 
+
 def button_16_hover(e):
     button_16.config(
         image=button_image_hover_16
     )
+
+
 def button_16_leave(e):
     button_16.config(
         image=button_image_16
     )
+
 
 button_16.bind('<Enter>', button_16_hover)
 button_16.bind('<Leave>', button_16_leave)
@@ -1154,14 +1236,18 @@ button_17.place(
 button_image_hover_17 = PhotoImage(
     file=relative_to_assets("button_hover_15.png", 2))
 
+
 def button_17_hover(e):
     button_17.config(
         image=button_image_hover_17
     )
+
+
 def button_17_leave(e):
     button_17.config(
         image=button_image_17
     )
+
 
 button_17.bind('<Enter>', button_17_hover)
 button_17.bind('<Leave>', button_17_leave)
@@ -1204,14 +1290,18 @@ button_19.place(
 button_image_hover_19 = PhotoImage(
     file=relative_to_assets("button_hover_16.png", 2))
 
+
 def button_19_hover(e):
     button_19.config(
         image=button_image_hover_19
     )
+
+
 def button_19_leave(e):
     button_19.config(
         image=button_image_19
     )
+
 
 button_19.bind('<Enter>', button_19_hover)
 button_19.bind('<Leave>', button_19_leave)
@@ -1254,14 +1344,18 @@ button_21.place(
 button_image_hover_21 = PhotoImage(
     file=relative_to_assets("button_hover_17.png", 2))
 
+
 def button_21_hover(e):
     button_21.config(
         image=button_image_hover_21
     )
+
+
 def button_21_leave(e):
     button_21.config(
         image=button_image_21
     )
+
 
 button_21.bind('<Enter>', button_21_hover)
 button_21.bind('<Leave>', button_21_leave)
@@ -1328,14 +1422,18 @@ button_24.place(
 button_image_hover_24 = PhotoImage(
     file=relative_to_assets("button_hover_18.png", 2))
 
+
 def button_24_hover(e):
     button_24.config(
         image=button_image_hover_24
     )
+
+
 def button_24_leave(e):
     button_24.config(
         image=button_image_24
     )
+
 
 # Apply Tooltip to button_24
 tooltip_24 = ToolTip(button_24, """Required section, enables you to have this scheduled scan run
@@ -1363,14 +1461,18 @@ button_25.place(
 button_image_hover_25 = PhotoImage(
     file=relative_to_assets("button_hover_19.png", 2))
 
+
 def button_25_hover(e):
     button_25.config(
         image=button_image_hover_25
     )
+
+
 def button_25_leave(e):
     button_25.config(
         image=button_image_25
     )
+
 
 # Apply Tooltip to button_25
 tooltip_25 = ToolTip(button_25, """Required section, please select your timezone""")
@@ -1397,14 +1499,18 @@ button_26.place(
 button_image_hover_26 = PhotoImage(
     file=relative_to_assets("button_hover_20.png", 2))
 
+
 def button_26_hover(e):
     button_26.config(
         image=button_image_hover_26
     )
+
+
 def button_26_leave(e):
     button_26.config(
         image=button_image_26
     )
+
 
 # Apply Tooltip to button_26
 tooltip_26 = ToolTip(button_26, """Required section, please provide the time you want the scan
@@ -1462,14 +1568,18 @@ button_28.place(
 button_image_hover_28 = PhotoImage(
     file=relative_to_assets("button_hover_21.png", 2))
 
+
 def button_28_hover(e):
     button_28.config(
         image=button_image_hover_28
     )
+
+
 def button_28_leave(e):
     button_28.config(
         image=button_image_28
     )
+
 
 # Apply Tooltip to button_28
 tooltip_28 = ToolTip(button_28, """Optional section, allows you to provide 
@@ -1819,7 +1929,7 @@ edit_conf_button_9 = Button(
     image=edit_conf_button_image_9,
     borderwidth=0,
     highlightthickness=0,
-#    command=lambda: show_frame(page2_frame),  # Navigate to page2_frame
+    #    command=lambda: show_frame(page2_frame),  # Navigate to page2_frame
     relief="flat"
 )
 edit_conf_button_9.place(
@@ -1970,7 +2080,7 @@ edit_conf_button_13 = Button(
     image=edit_conf_button_image_13,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: show_frame(dashbard_frame),  # Navigate to page2_frame
+    command=lambda: show_frame(dashboard_frame),  # Navigate to page2_frame
     relief="flat"
 )
 edit_conf_button_13.place(
@@ -2687,7 +2797,7 @@ edit_conf_button_35.bind("<Leave>", tooltip.hide_tooltip)
 
 # --- Dashboard/Main page ---
 dashboard_canvas = Canvas(
-    dashbard_frame,
+    dashboard_frame,
     bg="#FFFFFF",
     height=885,
     width=1000,
@@ -2708,7 +2818,7 @@ dashboard_canvas.create_rectangle(
 dashboard_button_image_1 = PhotoImage(
     file=relative_to_assets("button_1.png", 1))
 dashboard_button_1 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_1,
     borderwidth=0,
     highlightthickness=0,
@@ -2722,22 +2832,75 @@ dashboard_button_1.place(
     height=386.0
 )
 
-dashboard_button_image_2 = PhotoImage(
-    file=relative_to_assets("button_2.png", 1))
-dashboard_button_2 = Button(
-    dashbard_frame,
-    image=dashboard_button_image_2,
+#dashboard_button_image_2 = PhotoImage(
+#    file=relative_to_assets("button_2.png", 1))
+#dashboard_button_2 = Button(
+#    dashbard_frame,
+#    image=dashboard_button_image_2,
+#    borderwidth=0,
+#    highlightthickness=0,
+#    command=lambda: print("dashboard_button_2 clicked"),
+#    relief="flat"
+#)
+#dashboard_button_2.place(
+#    x=318.0,
+#    y=102.0,
+#    width=634.0,
+#    height=305.0
+#)
+
+dashboard_output_text = Text(
+    dashboard_frame,
+    bg="#1B1C21",
+    fg="#FFFFFF",
+    font=("Inter", 10),
+    wrap="word",
+    state='disabled',
+    bd=0,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("dashboard_button_2 clicked"),
     relief="flat"
 )
-dashboard_button_2.place(
-    x=318.0,
-    y=102.0,
-    width=634.0,
-    height=305.0
+dashboard_output_text.place(
+    x=326.0,
+    y=110.0,
+    width=616.0,
+    height=285
 )
+
+# Add a Scrollbar to the Text widget, positioned at the far right
+output_scrollbar = Scrollbar(
+    dashboard_frame,
+    command=dashboard_output_text.yview,
+    orient='vertical',
+    borderwidth=0,
+    highlightthickness=0,
+    relief='flat',
+    bg="#313237",
+    activebackground="#313237",
+    troughcolor="#1B1C21"
+)
+output_scrollbar.place(
+    x=315.0 + 614.0,  # 932.0 pixels
+    y=110.0,
+    width=15.0,         # Explicit scrollbar width
+    height=285.0
+)
+
+# Link the Scrollbar to the Text widget
+dashboard_output_text.configure(yscrollcommand=output_scrollbar.set)
+
+# Function to insert text into the Text widget
+def insert_output(line):
+    dashboard_output_text.config(state='normal')          # Enable editing
+    dashboard_output_text.insert('end', line)             # Insert the line at the end
+    dashboard_output_text.see('end')                      # Auto-scroll to the end
+    dashboard_output_text.config(state='disabled')        # Disable editing
+
+# Example usage: Insert some text
+insert_output("Welcome to MedusaGuard!\n")
+for i in range(1, 101):
+    insert_output(f"Scan progress: {i}%\n")
 
 dashboard_canvas.create_rectangle(
     0.0,
@@ -2750,7 +2913,7 @@ dashboard_canvas.create_rectangle(
 dashboard_button_image_3 = PhotoImage(
     file=relative_to_assets("button_3.png", 1))
 dashboard_button_3 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_3,
     borderwidth=0,
     highlightthickness=0,
@@ -2803,7 +2966,7 @@ dashboard_canvas.create_text(
 dashboard_button_image_4 = PhotoImage(
     file=relative_to_assets("button_4.png", 1))
 dashboard_button_4 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_4,
     borderwidth=0,
     highlightthickness=0,
@@ -2820,7 +2983,7 @@ dashboard_button_4.place(
 dashboard_button_image_5 = PhotoImage(
     file=relative_to_assets("button_5.png", 1))
 dashboard_button_5 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_5,
     borderwidth=0,
     highlightthickness=0,
@@ -2872,7 +3035,7 @@ dashboard_canvas.create_text(
 dashboard_button_image_6 = PhotoImage(
     file=relative_to_assets("button_6.png", 1))
 dashboard_button_6 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_6,
     borderwidth=0,
     highlightthickness=0,
@@ -2908,7 +3071,7 @@ dashboard_button_6.bind('<Leave>', dashboard_button_6_leave)
 dashboard_button_image_7 = PhotoImage(
     file=relative_to_assets("button_7.png", 1))
 dashboard_button_7 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_7,
     borderwidth=0,
     highlightthickness=0,
@@ -2943,7 +3106,7 @@ dashboard_button_7.bind('<Leave>', dashboard_button_7_leave)
 dashboard_button_image_8 = PhotoImage(
     file=relative_to_assets("button_8.png", 1))
 dashboard_button_8 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_8,
     borderwidth=0,
     highlightthickness=0,
@@ -2979,7 +3142,7 @@ dashboard_button_8.bind('<Leave>', dashboard_button_8_leave)
 dashboard_button_image_9 = PhotoImage(
     file=relative_to_assets("button_9.png", 1))
 dashboard_button_9 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_9,
     borderwidth=0,
     highlightthickness=0,
@@ -3015,7 +3178,7 @@ dashboard_button_9.bind('<Leave>', dashboard_button_9_leave)
 dashboard_button_image_10 = PhotoImage(
     file=relative_to_assets("button_10.png", 1))
 dashboard_button_10 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_10,
     borderwidth=0,
     highlightthickness=0,
@@ -3051,7 +3214,7 @@ dashboard_button_10.bind('<Leave>', dashboard_button_10_leave)
 dashboard_button_image_11 = PhotoImage(
     file=relative_to_assets("button_11.png", 1))
 dashboard_button_11 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_11,
     borderwidth=0,
     highlightthickness=0,
@@ -3087,7 +3250,7 @@ dashboard_button_11.bind('<Leave>', dashboard_button_11_leave)
 dashboard_button_image_12 = PhotoImage(
     file=relative_to_assets("button_12.png", 1))
 dashboard_button_12 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_12,
     borderwidth=0,
     highlightthickness=0,
@@ -3123,7 +3286,7 @@ dashboard_button_12.bind('<Leave>', dashboard_button_12_leave)
 dashboard_button_image_13 = PhotoImage(
     file=relative_to_assets("button_13.png", 1))
 dashboard_button_13 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_13,
     borderwidth=0,
     highlightthickness=0,
@@ -3159,7 +3322,7 @@ dashboard_button_13.bind('<Leave>', dashboard_button_13_leave)
 dashboard_button_image_14 = PhotoImage(
     file=relative_to_assets("button_14.png", 1))
 dashboard_button_14 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_14,
     borderwidth=0,
     highlightthickness=0,
@@ -3195,7 +3358,7 @@ dashboard_button_14.bind('<Leave>', dashboard_button_14_leave)
 dashboard_button_image_15 = PhotoImage(
     file=relative_to_assets("button_15.png", 1))
 dashboard_button_15 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_15,
     borderwidth=0,
     highlightthickness=0,
@@ -3231,7 +3394,7 @@ dashboard_button_15.bind('<Leave>', dashboard_button_15_leave)
 dashboard_button_image_16 = PhotoImage(
     file=relative_to_assets("button_16.png", 1))
 dashboard_button_16 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_16,
     borderwidth=0,
     highlightthickness=0,
@@ -3264,10 +3427,11 @@ def dashboard_button_16_leave(e):
 dashboard_button_16.bind('<Enter>', dashboard_button_16_hover)
 dashboard_button_16.bind('<Leave>', dashboard_button_16_leave)
 
+# Stop scan button
 dashboard_button_image_17 = PhotoImage(
     file=relative_to_assets("button_17.png", 1))
 dashboard_button_17 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_17,
     borderwidth=0,
     highlightthickness=0,
@@ -3300,10 +3464,11 @@ def dashboard_button_17_leave(e):
 dashboard_button_17.bind('<Enter>', dashboard_button_17_hover)
 dashboard_button_17.bind('<Leave>', dashboard_button_17_leave)
 
+# Start scan button
 dashboard_button_image_18 = PhotoImage(
     file=relative_to_assets("button_18.png", 1))
 dashboard_button_18 = Button(
-    dashbard_frame,
+    dashboard_frame,
     image=dashboard_button_image_18,
     borderwidth=0,
     highlightthickness=0,
@@ -3331,6 +3496,7 @@ def dashboard_button_18_leave(e):
     dashboard_button_18.config(
         image=dashboard_button_image_18
     )
+
 
 # Running the scheduler in a background thread
 scheduler_thread = threading.Thread(target=run_scheduler, daemon=True)
