@@ -1,33 +1,52 @@
-****Setup a Periodical Pentest Program****
+![Medusa Guard Banner](https://github.com/user-attachments/assets/ba744d99-b6a2-4f27-adbd-1ef93332d052)
 
-**Project Overview**
+##   **Automated Vulnerability Detection and Exploitation Tool for Enhanced Security**
 
-This project aims to enhance the early detection capabilities of our organisation by establishing an automated penetration testing program. The program will regularly scan our environment for vulnerabilities and attempt to exploit them to ensure system security and data protection are maintained at the highest levels.
+                                  
 
-**Project Objectives**
+### **Project Overview**
 
-Deploy a Penetration Testing Program: Implement a system that performs regular, automated penetration testing.
-Improve System Security: Identify and address vulnerabilities before they can be exploited by malicious actors.
-Data Protection: Ensure robust protection of sensitive data within the organisation.
-Training & Support: Provide comprehensive training and ongoing support for the SecOps team on the new system.
+This project focuses on developing an automated vulnerability detection and exploitation system designed to safeguard enterprise environments by identifying and exploiting security vulnerabilities. By leveraging automation, the system continuously monitors and mitigates potential weaknesses before they can be exploited by malicious actors.
 
-**Key Features**
+The system integrates well-established open-source tools - **Nikto, Greenbone OpenVAS, Nuclei, and Metasploit** — to perform comprehensive vulnerability scanning, management, and controlled exploitation. It is designed to prioritise security while maintaining system availability and integrity, ensuring that no harmful payloads are delivered during scans.
 
-Open-Source Scanning Tool: The program will deploy an open-source scanning tool to identify potential vulnerabilities.
-Open-Source Exploitation Tool: An exploitation tool will be used to test the vulnerabilities identified.
-Vulnerability Register Integration: Identified issues will be recorded in a register for tracking and remediation purposes.
-Reporting Procedures: Detailed reports will be generated for each scan, including issue summaries, descriptions, impacts, likelihoods, and remediation recommendations.
-Stakeholder Communication: Develop procedures to effectively communicate findings with management and resolver groups.
+### **Technologies Used**
 
-**Scope of Work**
+1. **Nikto:** Deployed for web server vulnerability detection, this tool quickly identifies common issues such as outdated software, misconfigurations, and dangerous files, allowing for swift resolution.
 
-Deployment: Set up and configure the necessary tools for automated penetration testing.
-Integration: Ensure the tools integrate seamlessly with the organisation’s systems without disrupting daily operations.
-Reporting: Create templates and guidelines for consistent and comprehensive reporting.
-Training: Optionally provide training sessions for staff to ensure proficient use of the new system.
-Support: Optionally offer post-migration support and troubleshooting.
+2. **Greenbone OpenVAS:** Provides in-depth network infrastructure vulnerability scanning, offering a wide range of detection capabilities based on its vast vulnerability database, ensuring comprehensive coverage of potential weaknesses.
 
-**Constraints and Limitations**
+3. **Nuclei:** Utilised for fast and flexible vulnerability scanning, Nuclei allows for template-based scanning, providing an efficient way to detect security flaws across applications and infrastructure.
 
-The penetration testing program must not disrupt everyday operations.
-Integration with a future vulnerability register must be planned and executed without affecting system performance.
+4. **Metasploit Framework:** Utilised to verify exploitability by safely testing identified vulnerabilities with real-time controlled exploitation.
+
+### **Key Features**
+- **Periodic Automated Testing:** The system supports automated scheduling of vulnerability scans and exploitation tests at regular intervals, providing continuous network monitoring for new vulnerabilities.
+
+- **Advanced Exploitation Automation:** The system automatically links identified vulnerabilities to known exploits from various tools, reducing manual effort while enhancing accuracy in exploit validation.
+
+- **Interactive Dashboard for Reports:** A GUI-based dashboard offers real-time insights into identified vulnerabilities, trends, and remediation steps. Reports are accessible in both technical and non-technical formats, making them useful for both security teams and executive stakeholders.
+
+### **How to install Medusa Guard**
+
+### **How to use Medusa Guard**
+
+
+
+### **Credits**
+
+- Conner Dogger
+https://github.com/DogLogik
+
+- Costa Spandideas
+https://github.com/cozzie19
+  
+- Luke Alexander
+https://github.com/LukeyBoyy
+
+- Mark Kerleroux
+https://github.com/MarkK-LaTrobe
+
+- Timothy  Barclay
+https://github.com/tim-barc
+
