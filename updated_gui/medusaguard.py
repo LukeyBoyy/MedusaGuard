@@ -6,6 +6,7 @@ from datetime import datetime
 import threading
 import schedule
 import time
+import queue
 from tkcalendar import Calendar
 import pytz
 from pytz import all_timezones
@@ -37,6 +38,11 @@ ASSETS_PATH_FRAME0 = BASE_PATH / Path("assets/edit_conf_frame")
 ASSETS_PATH_FRAME1 = BASE_PATH / Path("assets/dashboard_frame")
 ASSETS_PATH_FRAME2 = BASE_PATH / Path("assets/scheduler_frame")
 
+# Create a queue to communicate between threads
+output_queue = queue.Queue()
+
+# Global variable to hold the subprocess.Popen object
+scan_process = None
 
 def relative_to_assets(path: str, frame_number: int = 0) -> Path:
     """
@@ -62,6 +68,98 @@ def relative_to_assets(path: str, frame_number: int = 0) -> Path:
     else:
         raise ValueError("Invalid frame number. Must be 0 or 1.")
 
+def insert_output(line):
+    dashboard_output_text.config(state='normal')
+    dashboard_output_text.insert('end', line)
+    dashboard_output_text.see('end')
+    dashboard_output_text.config(state='disabled')
+
+def start_scan():
+    """
+    Initiates the scan by running main.py in a separate thread.
+    Clears previous output from the dashboard_output_text widget.
+    """
+
+    # Clear previous output
+    dashboard_output_text.config(state='normal')
+    dashboard_output_text.delete('1.0', 'end')
+    dashboard_output_text.config(state='disabled')
+
+    # Start the scan in a new daemon thread
+    scan_thread = threading.Thread(target=run_main_py, daemon=True)
+    scan_thread.start()
+
+def run_main_py():
+    """
+    Runs main.py as a subprocess and captures its stdout.
+    Puts each line of output into the output_queue.
+    Signals completion by putting None into the queue.
+    """
+    global scan_process  # Declare as global to modify the global variable
+    try:
+        # Start the subprocess with unbuffered output
+        scan_process = subprocess.Popen(
+            ["python3", "-u", "main.py"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1  # Line-buffered
+        )
+
+        # Read the stdout line by line
+        for line in scan_process.stdout:
+            output_queue.put(line)
+
+        scan_process.stdout.close()
+        scan_process.wait()
+    except Exception as e:
+        output_queue.put(f"Error running main.py: {e}\n")
+    finally:
+        # Signal that the scan has completed
+        output_queue.put(None)
+        scan_process = None  # Reset the scan_process variable
+
+def process_output_queue():
+    """
+    Periodically checks the output_queue for new lines and inserts them into the dashboard_output_text widget.
+    Re-enables the Start Scan button when the scan is complete.
+    """
+    try:
+        while True:
+            line = output_queue.get_nowait()
+            if line is None:
+                # Scan has completed
+                dashboard_button_18.config(state='normal')
+                insert_output("\nScan Completed.\n")
+            else:
+                insert_output(line)
+    except queue.Empty:
+        pass
+    finally:
+        # Schedule the next check
+        window.after(50, process_output_queue)
+
+def stop_scan():
+    """
+    Terminates the running main.py subprocess if it exists.
+    Inserts a message into the output queue indicating the scan was stopped.
+    Re-enables the Start Scan button.
+    """
+    global scan_process
+    if scan_process and scan_process.poll() is None:
+        try:
+            scan_process.terminate()  # Gracefully terminate the subprocess
+            scan_process.wait(timeout=5)  # Wait for it to terminate
+            insert_output("\nScan has been terminated by the user.\n")
+        except subprocess.TimeoutExpired:
+            scan_process.kill()  # Force kill if it doesn't terminate
+            insert_output("\nScan process was forcefully killed.\n")
+        except Exception as e:
+            insert_output(f"\nError stopping scan: {e}\n")
+        finally:
+            scan_process = None  # Reset the scan_process variable
+    else:
+        insert_output("\nNo active scan to stop.\n")
 
 # Global flag to control the scheduler
 running_scheduler = True
@@ -2835,23 +2933,6 @@ dashboard_button_1.place(
     height=386.0
 )
 
-#dashboard_button_image_2 = PhotoImage(
-#    file=relative_to_assets("button_2.png", 1))
-#dashboard_button_2 = Button(
-#    dashbard_frame,
-#    image=dashboard_button_image_2,
-#    borderwidth=0,
-#    highlightthickness=0,
-#    command=lambda: print("dashboard_button_2 clicked"),
-#    relief="flat"
-#)
-#dashboard_button_2.place(
-#    x=318.0,
-#    y=102.0,
-#    width=634.0,
-#    height=305.0
-#)
-
 dashboard_output_text = Text(
     dashboard_frame,
     bg="#1B1C21",
@@ -2895,15 +2976,14 @@ dashboard_output_text.configure(yscrollcommand=output_scrollbar.set)
 
 # Function to insert text into the Text widget
 def insert_output(line):
-    dashboard_output_text.config(state='normal')          # Enable editing
-    dashboard_output_text.insert('end', line)             # Insert the line at the end
-    dashboard_output_text.see('end')                      # Auto-scroll to the end
-    dashboard_output_text.config(state='disabled')        # Disable editing
+    dashboard_output_text.config(state='normal')
+    dashboard_output_text.insert('end', line)
+    dashboard_output_text.see('end')
+    dashboard_output_text.config(state='disabled')
 
 # Example usage: Insert some text
 insert_output("Welcome to MedusaGuard!\n")
-for i in range(1, 101):
-    insert_output(f"Scan progress: {i}%\n")
+insert_output("###ADD DOCUMENT/SHORT USER GUIDE HERE###")
 
 dashboard_canvas.create_rectangle(
     0.0,
@@ -3438,7 +3518,7 @@ dashboard_button_17 = Button(
     image=dashboard_button_image_17,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("stop scan button clicked"),
+    command=stop_scan,
     relief="flat"
 )
 dashboard_button_17.place(
@@ -3475,7 +3555,7 @@ dashboard_button_18 = Button(
     image=dashboard_button_image_18,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("start scan button clicked"),
+    command=start_scan,
     relief="flat"
 )
 dashboard_button_18.place(
@@ -3540,6 +3620,9 @@ window.resizable(False, False)
 
 # Show the window after all widgets have been loaded
 window.deiconify()
+
+# Start processing the output queue
+window.after(100, process_output_queue)
 
 # Start the Tkinter event loop
 window.mainloop()
