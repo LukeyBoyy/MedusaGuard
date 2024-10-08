@@ -71,7 +71,7 @@ services:
       - data_objects_vol:/var/lib/gvm/data-objects/gvmd
       - vt_data_vol:/var/lib/openvas/plugins
       - psql_data_vol:/var/lib/postgresql
-      - /tmp/gvm/gvmd:/run/gvmd
+      - /run/gvmd:/run/gvmd
       - ospd_openvas_socket_vol:/run/ospd
       - psql_socket_vol:/var/run/postgresql
     depends_on:
@@ -94,7 +94,7 @@ services:
     ports:
       - 9392:80
     volumes:
-      - /tmp/gvm/gvmd:/run/gvmd
+      - /run/gvmd:/run/gvmd
     depends_on:
       - gvmd
   # Sets log level of openvas to the set LOG_LEVEL within the env
