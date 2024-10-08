@@ -28,9 +28,10 @@ An all-in-one tool that integrates **Nikto**, **Greenbone OpenVAS**, **Nuclei**,
    - [Periodic Automated Testing](#periodic-automated-testing)
    - [Advanced Exploitation Automation](#advanced-exploitation-automation)
    - [Interactive Dashboard for Reports](#interactive-dashboard-for-reports)
-4. [How to Use Medusa Guard](#how-to-use-medusa-guard)
-5. [License](#license)
-6. [Credits](#credits)
+4. [How to Install Medusa Guard](#how-to-install-medusa-guard)
+5. [How to Use Medusa Guard](#how-to-use-medusa-guard)
+6. [License](#license)
+7. [Credits](#credits)
 
 ---
 
