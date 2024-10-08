@@ -31,7 +31,8 @@ The system integrates well-established open-source tools - **Nikto, Greenbone Op
 
 ### **How to use Medusa Guard**
 
-
+### **Licence**
+This project is licensed under the terms of the Apache License Version 2.0 and is available for free.
 
 ### **Credits**
 
