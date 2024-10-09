@@ -4,7 +4,7 @@ import subprocess
 from termcolor import colored
 
 
-print_timestamp = time.strftime("%Y/%m/%d_%H:%M:%S")
+print_timestamp = time.strftime("%d-%m-%Y %H:%M:%S")
 
 
 def run_nikto_scans(nikto_target_dir, nikto_target_file):
