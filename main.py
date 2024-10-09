@@ -1,14 +1,18 @@
 import os
 import sys
+import subprocess
 import time
+import csv
 import argparse
 import configparser
 from termcolor import colored
+from datetime import *
 from nuclei_utils import run_nuclei_scans, update_nuclei
 from openvas_utils import openvas_scan, update_nvt, update_scap, update_cert
 from report_utils import generate_report
 from config_utils import update_config_file
 from nikto_utils import run_nikto_scans
+from exploit_module import *
 
 
 sys.stdout.reconfigure(line_buffering=True)
@@ -179,6 +183,21 @@ def main():
         )
     else:
         print("Failed to generate the CSV report, skipping report generation.")
+    
+    # Exploitation Module & Globally Defined Variables
+    connectest = False
+    connectfail = "Connection to the Metasploit RPC server has failed. Attempting again in 10 seconds."
+    exploitedcves = 0
+    incompatiblecves = 0
+    noexploitcve = 0
+    nxcvelist = ['0']
+    rowcounter = 0
+    
+    reportcreation()
+    subprocess.run(["msfrpcd -P kali"], shell = True)
+    rpcconnect(connectest, connectfail)
+    openvasread(rowcounter)
+    reportfinalise(incompatiblecve)
 
 
 if __name__ == "__main__":
