@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import subprocess
 import time
 import csv
@@ -183,6 +184,19 @@ def main():
         )
     else:
         print("Failed to generate the CSV report, skipping report generation.")
+
+    # Write counts to counts.json
+    counts = {
+        "hosts_count": hosts_count,
+        "apps_count": apps_count,
+        "os_count": os_count,
+        "high_count": high_count,
+        "medium_count": medium_count,
+        "low_count": low_count
+    }
+
+    with open('counts.json', 'w') as f:
+        json.dump(counts, f)
     
     # Exploitation Module & Globally Defined Variables
     connectest = False
