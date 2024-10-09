@@ -10,7 +10,7 @@ from pathlib import Path
 from base64 import b64decode
 
 
-print_timestamp = time.strftime("%Y/%m/%d_%H:%M:%S")
+print_timestamp = time.strftime("%d-%m-%Y %H:%M:%S")
 
 
 def update_nvt():
