@@ -6,6 +6,7 @@ from datetime import datetime
 import threading
 import schedule
 import time
+import json
 import queue
 from tkcalendar import Calendar
 from termcolor import colored
@@ -396,6 +397,32 @@ def process_output_queue():
                     vuln_image_label.image = new_vuln_image
                 except Exception as e:
                     print(f"Error loading new vuln image: {e}")
+
+                # Read the counts from counts.json
+                try:
+                    with open('counts.json', 'r') as f:
+                        counts = json.load(f)
+                    hosts_count = counts.get('hosts_count', 0)
+                    apps_count = counts.get('apps_count', 0)
+                    os_count = counts.get('os_count', 0)
+                    high_count = counts.get('high_count', 0)
+                    medium_count = counts.get('medium_count', 0)
+                    low_count = counts.get('low_count', 0)
+
+                    # Update the vuln_content variable
+                    vuln_content = f"""
+    ●  Hosts Scanned:                     {hosts_count}
+    ●  Applications Scanned:              {apps_count}
+    ●  Operating Systems Scanned:    {os_count}
+    🔴 High Vulnerabilities:              {high_count}
+    🟡 Medium Vulnerabilities:          {medium_count}
+    🟢 Low Vulnerabilities:                {low_count}
+    """
+                    # Update the label
+                    vuln_scan_results_label.config(text=vuln_content)
+                except Exception as e:
+                    print(f"Error reading counts.json: {e}")
+
             else:
                 insert_output(line)
     except queue.Empty:
@@ -3215,10 +3242,13 @@ output_scrollbar.place(
 # Link the Scrollbar to the Text widget
 dashboard_output_text.configure(yscrollcommand=output_scrollbar.set)
 
+# Configure the spacing tag to adjust line spacing only
+dashboard_output_text.tag_configure('spacing', spacing2=5)
+
 # Function to insert text into the Text widget
 def insert_output(line):
     dashboard_output_text.config(state='normal')
-    dashboard_output_text.insert('end', line)
+    dashboard_output_text.insert('end', line, 'spacing')
     dashboard_output_text.see('end')
     dashboard_output_text.config(state='disabled')
 
@@ -3836,21 +3866,23 @@ exploit_image_label.place(x=660, y=550)
 
 # Define the text to display in the two Text widgets
 vuln_content = """
-◽ Hosts Scanned:
-◽ Applications Scanned:
-◽ Operating Systems Scanned:
 
-◽ High Vulnerabilities
-◽ Medium Vulnerabilities
-◽ Low Vulnerabilities
+
+
+                              Awaiting Results
+
+
+
 """
 
 exploit_content = """
-◽ Hosts Tested:
-◽ Modules Used: 
 
-◽ Successful Exploits
-◽ Unsuccessful Exploits
+
+
+                              Awaiting Results
+
+
+
 """
 
 vuln_scan_results_text_content = vuln_content
@@ -3861,7 +3893,7 @@ vuln_scan_results_label = Label(
     text=vuln_scan_results_text_content,
     bg="#313237",
     fg="#FFFFFF",
-    font=("Inter Bold", 7),
+    font=("Inter Bold", 8),
     wraplength=280,  # Set wraplength to the width of the label
     anchor="w",      # Left-align the text within the label
     justify="left"   # Justify the text to the left when wrapped
@@ -3878,7 +3910,7 @@ exploit_results_text = Label(
     text=exploit_results_text_content,
     bg="#313237",
     fg="#FFFFFF",
-    font=("Inter Bold", 7),
+    font=("Inter Bold", 8),
     wraplength=280,  # Set wraplength to the width of the label
     anchor="w",      # Left-align the text within the label
     justify="left"   # Justify the text to the left when wrapped
