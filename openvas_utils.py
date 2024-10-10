@@ -8,6 +8,7 @@ from gvm.protocols.latest import Gmp
 from gvm.errors import GvmError
 from pathlib import Path
 from base64 import b64decode
+from logger import logger
 
 
 print_timestamp = time.strftime("%d-%m-%Y %H:%M:%S")
@@ -25,10 +26,12 @@ def update_nvt():
         colored(f"[{print_timestamp}] [+] ", "cyan")
         + "Greenbone Vulnerability Scan Started"
     )
+    logger.info("Greenbone vulnerability scan started")
     try:
         # Command to update the NVT feed
         nvt_command = ["greenbone-nvt-sync"]
         nvt_msg = colored("Updating NVT feed", "white")
+        logger.info("Updating NVT feed")
 
         print(nvt_msg)
 
@@ -42,12 +45,15 @@ def update_nvt():
             timeout=2700,
         )
         print(colored("NVT update successful", "white"))
+        logger.info("NVT updated successful")
     except subprocess.CalledProcessError as e:
         print(
             colored(f"[ERROR] An error occurred while updating the feeds: {e}", "red")
         )
+        logger.error(f"An error occurred while updating the NVT feed: {e}")
     except Exception as e:
         print(colored(f"[ERROR] Unexpected error: {e}", "red"))
+        logger.error(f"An unexpected error occurred while updating the NVT feed: {e}")
 
 
 def update_scap():
@@ -61,6 +67,7 @@ def update_scap():
         # Command to update the SCAP feed
         scap_command = ["greenbone-scapdata-sync"]
         scap_msg = colored("Updating SCAP feed", "white")
+        logger.info("Updating SCAP feed")
 
         print(scap_msg)
 
@@ -75,12 +82,15 @@ def update_scap():
         )
 
         print(colored("SCAP data update successful", "white"))
+        logger.info("SCAP updated successful")
     except subprocess.CalledProcessError as e:
         print(
             colored(f"[ERROR] An error occurred while updating the feeds: {e}", "red")
         )
+        logger.error(f"An error occurred while updating the SCAP feed: {e}")
     except Exception as e:
         print(colored(f"[ERROR] Unexpected error: {e}", "red"))
+        logger.error(f"An unexpected error occurred while updating the SCAP feed: {e}")
 
 
 def update_cert():
@@ -94,6 +104,7 @@ def update_cert():
         # Command to update the CERT feed
         cert_command = ["greenbone-certdata-sync"]
         cert_msg = colored("Updating CERT feed", "white")
+        logger.info("Updating CERT feed")
 
         print(cert_msg)
 
@@ -108,13 +119,17 @@ def update_cert():
         )
 
         print(colored("CERT data update successful", "white"))
+        logger.info("CERT updated successful")
         print(colored("[INFO]", "cyan") + " Feed updates completed\n")
+        logger.info("All feeds updated successfully")
     except subprocess.CalledProcessError as e:
         print(
             colored(f"[ERROR] An error occurred while updating the feeds: {e}", "red")
         )
+        logger.error(f"An error occurred while updating the CERT feed: {e}")
     except Exception as e:
         print(colored(f"[ERROR] Unexpected error: {e}", "red"))
+        logger.error(f"An unexpected error occurred while updating the CERT feed: {e}")
 
 
 def read_host_from_file(file_path):
@@ -131,6 +146,13 @@ def read_host_from_file(file_path):
         # Read each line, strip whitespace, and ignore empty lines
         hosts = [line.strip() for line in file if line.strip()]
         # Join the hosts into a comma-separated string
+
+    if not hosts:
+        print(
+            colored(f"[ERROR] No hosts found in file: {file_path}", "red")
+        )
+        logger.error(f"No hosts found in file: {file_path}")
+
     return ",".join(hosts)
 
 
@@ -198,6 +220,7 @@ def openvas_scan(
         with Gmp(connection=connection) as gmp:
             # Authenticate with the GVM using provided credentials
             gmp.authenticate(username, password)
+            logger.info("Authenticated with Greenbone")
 
             # Retrieve existing targets and check if the target already exists
             targets_list = gmp.get_targets()
@@ -211,6 +234,7 @@ def openvas_scan(
                         colored("[INFO]", "cyan")
                         + f" Target {target_name} already exists with ID: {targetid}"
                     )
+                    logger.info(f"Created target with ID: {targetid}")
                     print(colored("[INFO]", "cyan") + " Creating task with this target")
 
             if not targetid:
@@ -225,6 +249,7 @@ def openvas_scan(
                 target_xml = ET.fromstring(target_response)
                 targetid = target_xml.get("id")
                 print(colored("[INFO]", "cyan") + f" Target ID is: {targetid}")
+                logger.info(f"Created target with ID: {targetid}")
 
             if targetid:
                 # Create a task for the target
@@ -237,8 +262,10 @@ def openvas_scan(
                 task_xml = ET.fromstring(create_task)
                 taskid = task_xml.get("id")
                 print(colored("[INFO]", "cyan") + f" Task created with ID: {taskid}")
+                logger.info(f"Task created with ID: {taskid}")
             else:
                 print(colored("[ERROR] Failed to create task", "red"))
+                logger.error("Failed to create task")
                 exit(1)
 
             print(colored("[INFO]", "cyan") + " Waiting for task to be ready")
@@ -249,12 +276,14 @@ def openvas_scan(
                 colored("[INFO]", "cyan")
                 + f" Task started successfully with ID: {taskid}\n"
             )
+            logger.info(f"Task started with ID: {taskid}")
 
             # Extract the report ID from the response
             report_xml = ET.fromstring(start_task)
             reportid = report_xml.find("report_id").text
 
             gvm_text = colored("Scanning...", "white")
+            logger.info("Scan started")
 
             print(gvm_text)
 
@@ -268,6 +297,7 @@ def openvas_scan(
                 task_status = task_status_xml.find(".//status").text
 
             print(colored(f"Scan completed, status: {task_status}", "white"))
+            logger.info(f"Scan completed, status: {task_status}")
 
             if task_status == "Done":
                 completion_time = time.strftime("%H:%M:%S %Y/%m/%d")
@@ -397,8 +427,10 @@ def openvas_scan(
                         + f" PDF Report downloaded as"
                         + colored(f" {pdf_path}", attrs=["bold"])
                     )
+                    logger.info(f"PDF report downloaded as {pdf_path}")
                 except Exception as e:
                     print(colored(f"[ERROR] Failed to download PDF report: {e}", "red"))
+                    logger.error(f"Failed to download PDF report: {e}")
 
                 # Writes the csv file
                 try:
@@ -433,6 +465,7 @@ def openvas_scan(
                                 + f" CSV Report downloaded as"
                                 + colored(f" {csv_path}", attrs=["bold"])
                             )
+                            logger.info(f"CSV report downloaded as {csv_path}")
 
                             # Return the necessary information for report generation
                             return (
@@ -450,12 +483,16 @@ def openvas_scan(
                             colored(f"[{print_timestamp}] [+]", "cyan")
                             + " Greenbone scan completed.\n"
                         )
+                        logger.info("Greenbone scan completed\n")
 
                 except Exception as e:
                     print(colored(f"[ERROR] Failed to download CSV report: {e}", "red"))
+                    logger.error(f"Failed to download CSV report: {e}")
     except GvmError as e:
         # Handle GVM-specific errors
         print(colored(f"[ERROR] An error occurred: {e}", "red"))
+        logger.error(f"A GVM error occurred: {e}")
     except Exception as e:
         # Handle any unexpected exceptions
         print(colored(f"[ERROR] An unexpected error occurred: {e}", "red"))
+        logger.error(f"An unexpected error occurred: {e}\n")
