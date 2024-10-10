@@ -2,6 +2,7 @@ import os
 import time
 import subprocess
 from termcolor import colored
+from logger import logger
 
 
 print_timestamp = time.strftime("%d-%m-%Y %H:%M:%S")
@@ -33,10 +34,13 @@ def update_nuclei():
         )
 
         print(colored("\rNuclei update successful.", "white"))
+        logger.info("Nuclei update successful")
     except subprocess.CalledProcessError as e:
         print(colored(f"\r[ERROR] An error occurred while updating Nuclei: {e}", "red"))
+        logger.error("Nuclei update timed out")
     except Exception as e:
         print(colored(f"\r[ERROR] Unexpected error: {e}", "red"))
+        logger.error(f"An error occurred while updating: {e}")
 
 
 def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
@@ -77,6 +81,7 @@ def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
         colored(f"[{print_timestamp}] [+] ", "cyan")
         + "Nuclei Vulnerability Scan Started"
     )
+    logger.info("Nuclei vulnerability scsn started")
 
     # Iterate over each target and run Nuclei scans
     for nuclei_target in nuclei_targets:
@@ -91,6 +96,7 @@ def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
                 f"Running {scan_type.replace('_', ' ')} scan on {nuclei_target}...",
                 "white",
             )
+            logger.info(f"Running {scan_type.replace('_', ' ')} scan on {nuclei_target}")
 
             # Display the scan message
             print(nuclei_scan_msg, end="", flush=True)
@@ -105,9 +111,9 @@ def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
                     timeout=3600,
                     check=True,
                 )
-                # print(colored("\nScan completed successfully.", "white"))
             except subprocess.CalledProcessError as e:
                 print(colored(f"\n[ERROR] Scan failed: {e}", "red"))
+                logger.error(f"An error occurred when scanning while scanning {nuclei_target}: {e}")
 
             print(
                 f"\n{scan_type.replace('_', ' ').capitalize()} scan results saved to "
@@ -139,9 +145,11 @@ def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
         colored(f"{nuclei_combined_output_file}", attrs=['bold']
     )
     )
+    logger.info(f"Nuclei output saved to {nuclei_combined_output_file}")
 
     # Clean up individual output files to save space
     try:
+        logger.info("Removing individual Nuclei output files")
         print(colored("[INFO]", "cyan") + " Removing redundant Nuclei output files...")
         for nuclei_target in nuclei_targets:
             for scan_type in nuclei_commands.keys():
@@ -151,6 +159,7 @@ def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
                 if os.path.exists(nuclei_output_file):
                     os.remove(nuclei_output_file)
         print(colored("[INFO]", "cyan") + " Redundant Nuclei output files removed.")
+        logger.info("Removed individual Nuclei output files")
     except Exception as e:
         # Handle any exceptions that occur during file deletion
         print(
@@ -158,9 +167,11 @@ def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
                 f"[ERROR] Failed to remove redundant Nuclei output files: {e}", "red"
             )
         )
+        logger.error(f"Failed to remove individual Nuclei output files: {e}")
 
     # Inform the user that all scans are completed and cleanup is done
     print(
         colored(f"[{print_timestamp}] [+]", "cyan")
         + " All Nuclei scans completed and files cleaned up.\n"
     )
+    logger.info("All Nuclei scans completed and files cleaned up.\n")
