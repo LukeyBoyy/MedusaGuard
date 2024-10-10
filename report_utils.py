@@ -263,7 +263,7 @@ def generate_report(
         fig_vuln_gui, ax = plt.subplots(figsize=(3.12, 1.96))
 
         # Create the pie chart
-        ax.pie(gui_vuln_sizes, labels=None, colors=gui_vuln_colors, autopct=lambda p: f'{int(p * sum(sizes) / 100)}',
+        ax.pie(gui_vuln_sizes, labels=None, colors=gui_vuln_colors, autopct=lambda p: f'{int(p * sum(gui_vuln_sizes) / 100)}',
                startangle=90, explode=explode, textprops={'fontsize': 8})
 
         fig_vuln_gui.patch.set_alpha(0)  # Makes the background transparent
