@@ -409,14 +409,15 @@ def process_output_queue():
                     medium_count = counts.get('medium_count', 0)
                     low_count = counts.get('low_count', 0)
 
-                    # Update the vuln_content variable
+                    # Content to print once scan completes
                     vuln_content = f"""
-    ●  Hosts Scanned:                     {hosts_count}
-    ●  Applications Scanned:              {apps_count}
-    ●  Operating Systems Scanned:    {os_count}
-    🔴 High Vulnerabilities:              {high_count}
-    🟡 Medium Vulnerabilities:          {medium_count}
-    🟢 Low Vulnerabilities:                {low_count}
+    [+] Hosts scanned: {hosts_count}
+    [+] Applications scanned: {os_count}
+    [+] Operating systems scanned: {apps_count}
+
+    ██████████ High vulnerabilities: {high_count}
+    ██████░░░░ Medium vulnerabilities: {medium_count}
+    ███░░░░░░░ Low vulnerabilities: {low_count}
     """
                     # Update the label
                     vuln_scan_results_label.config(text=vuln_content)
