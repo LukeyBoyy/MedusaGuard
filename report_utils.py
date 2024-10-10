@@ -100,6 +100,10 @@ def generate_report(
         result_graphs_dir, f"{task_name}_barchart_{completion_time}.png"
     )
     bar_chart_path = bar_out
+    gui_pie_out = os.path.join(
+        result_graphs_dir, f"vuln_pie.png"
+    )
+    gui_pie_out = gui_pie_out
 
     # Load and process CSV data from OpenVAS scan results
     df = pd.read_csv(rep_csv_path)
@@ -247,6 +251,39 @@ def generate_report(
         plt.close(fig2)  # Close the figure to free memory
     except Exception as e:
         print(colored(f"[ERROR] Failed to generate bar chart: {e}", "red"))
+
+    # Generate the pie graph for the GUI result section
+    try:
+        gui_vuln_labels = ['High', 'Medium', 'Low']
+        gui_vuln_sizes = [high_vulns, medium_vulns, low_vulns]
+        gui_vuln_colors = ['#ff6f61', '#ffcc66', '#66cc66']
+        explode = (0, 0, 0)  # No slice explode
+
+        # Adjust the figure size to provide more room for the legend
+        fig_vuln_gui, ax = plt.subplots(figsize=(3.12, 1.96))
+
+        # Create the pie chart
+        ax.pie(gui_vuln_sizes, labels=None, colors=gui_vuln_colors, autopct=lambda p: f'{int(p * sum(sizes) / 100)}',
+               startangle=90, explode=explode, textprops={'fontsize': 8})
+
+        fig_vuln_gui.patch.set_alpha(0)  # Makes the background transparent
+
+        # Create custom legend with circle markers and no lines
+        legend_elements = [Line2D([0], [0], marker='o', color='w', label=label, markersize=7,
+                                  markerfacecolor=color, linestyle='None')
+                           for label, color in zip(gui_vuln_labels, gui_vuln_colors)]
+
+        # Place the legend closer to the pie chart
+        legend = ax.legend(handles=legend_elements, loc='center left', bbox_to_anchor=(0.85, 0.5), frameon=False,
+                           fontsize=8)
+
+        for text in legend.get_texts():
+            text.set_color("white")
+
+        plt.savefig(gui_pie_out, bbox_inches="tight")
+        plt.close(fig_vuln_gui)  # Close the figure to free memory
+    except Exception as e:
+        print(colored(f"[ERROR] Failed to generate GUI vuln pie chart: {e}", "red"))
 
     try:
         # Initialize the PDF document
