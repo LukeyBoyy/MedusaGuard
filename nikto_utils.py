@@ -2,6 +2,7 @@ import os
 import time
 import subprocess
 from termcolor import colored
+from logger import logger
 
 
 print_timestamp = time.strftime("%d-%m-%Y %H:%M:%S")
@@ -34,6 +35,7 @@ def run_nikto_scans(nikto_target_dir, nikto_target_file):
         colored(f"[{print_timestamp}] [+] ", "cyan")
         + "Nikto Vulnerability Scan Started"
     )
+    logger.info("Nikto vulnerability scan started")
 
     # Read target hosts from the target file, removing any empty lines
     with open(nikto_target_file, "r") as file:
@@ -48,6 +50,7 @@ def run_nikto_scans(nikto_target_dir, nikto_target_file):
         # Construct the Nikto command
         nikto_cmd = f"nikto -h {nikto_target} -nointeractive -Format csv -output {nikto_output_file}"
         nikto_scan_msg = f"Running Nikto scan on {nikto_target}"
+        logger.info(f"Running NIkto scan on {nikto_target}")
 
         print(nikto_scan_msg)
 
@@ -64,16 +67,20 @@ def run_nikto_scans(nikto_target_dir, nikto_target_file):
                 f"Nikto scan completed. Results saved to "
                 + colored(nikto_output_file, attrs=["bold"])
             )
+            logger.info(f"NIkto scan completed. Results saved to {nikto_output_file}")
         except subprocess.TimeoutExpired:
             print(colored(f"Nikto scan timed out for target {nikto_target}", "red"))
+            logger.error(f"Nikto scan timed out for target {nikto_target}")
         except Exception as e:
             print(
                 colored(f"An error occurred while scanning {nikto_target}: {e}", "red")
             )
+            logger.error(f"An error occurred while scanning {nikto_target}: {e}")
 
     # Combine individual Nikto output files into the combined output file
     try:
         print(colored("[INFO]", "cyan") + " Combining Nikto output files")
+        logger.info("Combining Nikto output files")
         with open(nikto_combined_output_file, "w") as outfile:
             for idx, nikto_target in enumerate(nikto_targets):
                 nikto_output_file = os.path.join(
@@ -92,12 +99,15 @@ def run_nikto_scans(nikto_target_dir, nikto_target_file):
             + f" Combined output saved to "
             + colored(f"{nikto_combined_output_file}", attrs=["bold"])
         )
+        logger.info(f"Combined output saved to {nikto_combined_output_file}")
     except Exception as e:
         print(colored(f"[ERROR] Failed to combine Nikto output files: {e}", "red"))
+        logger.error(f"Failed to combine Nikto output files: {e}")
 
     # Remove individual Nikto output files after combining
     try:
         print(colored("[INFO]", "cyan") + " Removing individual Nikto output files")
+        logger.info("Removing individual Nikto output files")
         # Inform the user that all scans are completed and cleanup is done
         print(
             colored(f"[{print_timestamp}] [+]", "cyan")
@@ -111,6 +121,7 @@ def run_nikto_scans(nikto_target_dir, nikto_target_file):
             if os.path.exists(nikto_output_file):
                 os.remove(nikto_output_file)
 
+        logger.info("All Nikto scans completed and files cleaned up.\n")
     except Exception as e:
         # Handle any exceptions that occur during file deletion
         print(
@@ -118,6 +129,7 @@ def run_nikto_scans(nikto_target_dir, nikto_target_file):
                 f"[ERROR] Failed to remove individual Nikto output files: {e}", "red"
             )
         )
+        logger.error(f"Failed to remove individual Nikto output files: {e}\n")
 
     # Return the path to the combined Nikto CSV output file
     return nikto_combined_output_file
