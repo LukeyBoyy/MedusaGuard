@@ -1,498 +1,218 @@
 import os
-import time
+import sys
+import json
 import subprocess
-import xml.etree.ElementTree as ET
+import time
+import csv
+import argparse
+import configparser
 from termcolor import colored
-from gvm.connections import UnixSocketConnection
-from gvm.protocols.latest import Gmp
-from gvm.errors import GvmError
-from pathlib import Path
-from base64 import b64decode
-from logger import logger
+from datetime import *
+from nuclei_utils import run_nuclei_scans, update_nuclei
+from openvas_utils import openvas_scan, update_nvt, update_scap, update_cert
+from report_utils import generate_report
+from config_utils import update_config_file
+from nikto_utils import run_nikto_scans
+from exploit_module import *
 
 
-print_timestamp = time.strftime("%d-%m-%Y %H:%M:%S")
+sys.stdout.reconfigure(line_buffering=True)
 
-
-def update_nvt():
+def main():
     """
-    Update the Network Vulnerability Tests (NVT) feed for Greenbone Vulnerability Management (GVM).
+    Main function to handle the execution of the vulnerability scanning and exploitation tool.
 
-    This function runs 'greenbone-nvt-sync' to ensure that the NVT feed is up-to-date.
-    It handles any exceptions that may occur during the update process.
+    This function performs the following tasks:
+    - Parses command-line arguments.
+    - Verifies if the script is being run with root privileges.
+    - Displays a warning message.
+    - Creates directories for storing reports and results.
+    - Updates the configuration file with provided arguments.
+    - Runs Nuclei scans and updates.
+    - Runs Nikto scans.
+    - Updates the Greenbone Vulnerability Manager (GVM) feeds.
+    - Executes the OpenVAS scan and generates a report based on the scan results.
+
+    Command-line Arguments:
+        --config (str): Path to the config.ini file.
+        --username (str): Username for the GVM server.
+        --password (str): Password for the GVM server.
+        --path (str): Path to the Unix socket for GVM connection.
+        --port_list_name (str): Port list name for target configuration.
+        --scan_config (str): Scan configuration ID.
+        --scanner (str): Scanner ID.
+        --target_name (str): Name of the target.
+        --target_ip (str): IP address of the target to be scanned or file containing one IP address per line.
+        --task_name (str): Name of the task to be created and executed.
     """
-    print(colored(">>> Greenbone Vulnerability Scan", attrs=["bold"]))
-    print(
-        colored(f"[{print_timestamp}] [+] ", "cyan")
-        + "Greenbone Vulnerability Scan Started"
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description="Update config.ini settings.",
+        epilog="""Example usage:
+    sudo python3 <script_name>.py --config config.ini --username admin --password passwd --target_name router --task_name router_scan""",
     )
-    logger.info("Greenbone vulnerability scan started")
-    try:
-        # Command to update the NVT feed
-        nvt_command = ["greenbone-nvt-sync"]
-        nvt_msg = colored("Updating NVT feed", "white")
-        logger.info("Updating NVT feed")
+    parser.add_argument(
+        "--config", type=str, default="config.ini", help="Path to the config.ini file"
+    )
+    parser.add_argument("--username", type=str, help="Username for the GVM server")
+    parser.add_argument("--password", type=str, help="Password for the GVM server")
+    parser.add_argument(
+        "--path", type=str, help="Path to the Unix socket for GVM connection"
+    )
+    parser.add_argument(
+        "--port_list_name", type=str, help="Port list name for target configuration"
+    )
+    parser.add_argument("--scan_config", type=str, help="Scan configuration ID")
+    parser.add_argument("--scanner", type=str, help="Scanner ID")
+    parser.add_argument("--target_name", type=str, help="Name of the target")
+    parser.add_argument(
+        "--target_ip",
+        type=str,
+        help="IP address of the target to be scanned or file containing one IP address per line",
+    )
+    parser.add_argument(
+        "--task_name", type=str, help="Name of the task to be created and executed"
+    )
 
-        print(nvt_msg)
+    args = parser.parse_args()
 
-        # Run the NVT update command with a timeout of 2700 seconds (45 minutes)
-        subprocess.run(
-            nvt_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True,
-            timeout=2700,
-        )
-        print(colored("NVT update successful", "white"))
-        logger.info("NVT updated successful")
-    except subprocess.CalledProcessError as e:
-        print(
-            colored(f"[ERROR] An error occurred while updating the feeds: {e}", "red")
-        )
-        logger.error(f"An error occurred while updating the NVT feed: {e}")
-    except Exception as e:
-        print(colored(f"[ERROR] Unexpected error: {e}", "red"))
-        logger.error(f"An unexpected error occurred while updating the NVT feed: {e}")
-
-
-def update_scap():
-    """
-    Update the Security Content Automation Protocol (SCAP) feed for Greenbone Vulnerability Management (GVM).
-
-    This function runs 'greenbone-scapdata-sync' to ensure that the SCAP feed is up-to-date.
-    It handles any exceptions that may occur during the update process.
-    """
-    try:
-        # Command to update the SCAP feed
-        scap_command = ["greenbone-scapdata-sync"]
-        scap_msg = colored("Updating SCAP feed", "white")
-        logger.info("Updating SCAP feed")
-
-        print(scap_msg)
-
-        # Run the SCAP update command with a timeout of 2700 seconds (45 minutes)
-        subprocess.run(
-            scap_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True,
-            timeout=2700,
-        )
-
-        print(colored("SCAP data update successful", "white"))
-        logger.info("SCAP updated successful")
-    except subprocess.CalledProcessError as e:
-        print(
-            colored(f"[ERROR] An error occurred while updating the feeds: {e}", "red")
-        )
-        logger.error(f"An error occurred while updating the SCAP feed: {e}")
-    except Exception as e:
-        print(colored(f"[ERROR] Unexpected error: {e}", "red"))
-        logger.error(f"An unexpected error occurred while updating the SCAP feed: {e}")
-
-
-def update_cert():
-    """
-    Update the CERT feed for Greenbone Vulnerability Management (GVM).
-
-    This function runs 'greenbone-certdata-sync' to ensure that the CERT feed is up-to-date.
-    It handles any exceptions that may occur during the update process.
-    """
-    try:
-        # Command to update the CERT feed
-        cert_command = ["greenbone-certdata-sync"]
-        cert_msg = colored("Updating CERT feed", "white")
-        logger.info("Updating CERT feed")
-
-        print(cert_msg)
-
-        # Run the CERT update command with a timeout of 2700 seconds (45 minutes)
-        subprocess.run(
-            cert_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True,
-            timeout=2700,
-        )
-
-        print(colored("CERT data update successful", "white"))
-        logger.info("CERT updated successful")
-        print(colored("[INFO]", "cyan") + " Feed updates completed\n")
-        logger.info("All feeds updated successfully")
-    except subprocess.CalledProcessError as e:
-        print(
-            colored(f"[ERROR] An error occurred while updating the feeds: {e}", "red")
-        )
-        logger.error(f"An error occurred while updating the CERT feed: {e}")
-    except Exception as e:
-        print(colored(f"[ERROR] Unexpected error: {e}", "red"))
-        logger.error(f"An unexpected error occurred while updating the CERT feed: {e}")
-
-
-def read_host_from_file(file_path):
-    """
-    Read a list of host IPs from a file and returns them as a comma-separated string.
-
-    Args:
-        file_path (str): Path to the file containing the list of host IPs.
-
-    Returns:
-        str: A comma-separated string of host IPs.
-    """
-    with open(file_path, "r") as file:
-        # Read each line, strip whitespace, and ignore empty lines
-        hosts = [line.strip() for line in file if line.strip()]
-        # Join the hosts into a comma-separated string
-
-    if not hosts:
-        print(
-            colored(f"[ERROR] No hosts found in file: {file_path}", "red")
-        )
-        logger.error(f"No hosts found in file: {file_path}")
-
-    return ",".join(hosts)
-
-
-def openvas_scan(
-    path,
-    username,
-    password,
-    target_name,
-    target_ip,
-    port_list_name,
-    task_name,
-    scan_config,
-    scanner,
-):
-    """
-    Perform an OpenVAS scan using Greenbone Vulnerability Management (GVM).
-
-    This function handles the entire process of scanning a target, including creating the target and task,
-    starting the scan, monitoring its progress, and retrieving the results.
-    The scan results are saved in both PDF and CSV formats.
-
-    Args:
-        path (str): Path to the Unix socket for GVM connection.
-        username (str): Username for the GVM server.
-        password (str): Password for the GVM server.
-        target_name (str): Name of the target to be scanned.
-        target_ip (str): Path to the file containing target IPs or a single IP.
-        port_list_name (str): Port list ID for target configuration.
-        task_name (str): Name of the task to be created and executed.
-        scan_config (str): Scan configuration ID.
-        scanner (str): Scanner ID.
-
-    Returns:
-        tuple: A tuple containing:
-            - csv_path (str): Path to the CSV report.
-            - task_name (str): Name of the task.
-            - hosts_count (int): Number of hosts scanned.
-            - high_count (int): Number of high severity vulnerabilities found.
-            - medium_count (int): Number of medium severity vulnerabilities found.
-            - low_count (int): Number of low severity vulnerabilities found.
-            - apps_count (int): Number of applications scanned.
-            - os_count (int): Number of operating systems scanned.
-
-    Raises:
-        GvmError: If an error occurs while interacting with the GVM.
-        Exception: For any other unexpected errors.
-    """
-    # Read the target IPs from the specified file
-    hosts = read_host_from_file(target_ip)
-    number_of_hosts = len(hosts.split(",")) if hosts else 0
-
-    # Calculate the timeout based on the number of hosts (e.g., 3 hosts -> 3 hours)
-    # Ensure at least a minimum timeout (e.g., 1 hour) to handle small numbers
-    if number_of_hosts > 0:
-        timeout_hours = number_of_hosts
-    else:
-        timeout_hours = 1  # Default to 1 hour if no hosts are specified
-
-    connection_timeout = timeout_hours * 3600  # Convert hours to seconds
-
-    try:
-        # Establish a Unix socket connection to the GVM server
-        # A high timeout value is set to prevent a timeout error during long operations
-        connection = UnixSocketConnection(path=path, timeout=connection_timeout)
-        with Gmp(connection=connection) as gmp:
-            # Authenticate with the GVM using provided credentials
-            gmp.authenticate(username, password)
-            logger.info("Authenticated with Greenbone")
-
-            # Retrieve existing targets and check if the target already exists
-            targets_list = gmp.get_targets()
-            targets_list_xml = ET.fromstring(targets_list)
-            targetid = None
-
-            for target in targets_list_xml.findall(".//target"):
-                if target.find("name").text == target_name:
-                    targetid = target.get("id")
-                    print(
-                        colored("[INFO]", "cyan")
-                        + f" Target {target_name} already exists with ID: {targetid}"
-                    )
-                    logger.info(f"Created target with ID: {targetid}")
-                    print(colored("[INFO]", "cyan") + " Creating task with this target")
-
-            if not targetid:
-                # Create a new target if it doesn't exist
-                print(
-                    colored("[INFO]", "cyan")
-                    + f" Target {target_name} does not already exist. Creating a new target"
-                )
-                target_response = gmp.create_target(
-                    name=target_name, hosts=[hosts], port_list_id=port_list_name
-                )
-                target_xml = ET.fromstring(target_response)
-                targetid = target_xml.get("id")
-                print(colored("[INFO]", "cyan") + f" Target ID is: {targetid}")
-                logger.info(f"Created target with ID: {targetid}")
-
-            if targetid:
-                # Create a task for the target
-                create_task = gmp.create_task(
-                    name=task_name,
-                    config_id=scan_config,
-                    target_id=targetid,
-                    scanner_id=scanner,
-                )
-                task_xml = ET.fromstring(create_task)
-                taskid = task_xml.get("id")
-                print(colored("[INFO]", "cyan") + f" Task created with ID: {taskid}")
-                logger.info(f"Task created with ID: {taskid}")
-            else:
-                print(colored("[ERROR] Failed to create task", "red"))
-                logger.error("Failed to create task")
-                exit(1)
-
-            print(colored("[INFO]", "cyan") + " Waiting for task to be ready")
-            time.sleep(5)  # Wait for the task to be ready
-
-            start_task = gmp.start_task(task_id=taskid)
-            print(
-                colored("[INFO]", "cyan")
-                + f" Task started successfully with ID: {taskid}\n"
+    # Check if the script is being run with root privileges
+    if os.getuid() != 0:
+        exit(
+            colored(
+                "You need to have root privileges to run this script.\nPlease try again, this time using 'sudo'. Exiting...",
+                "red",
             )
-            logger.info(f"Task started with ID: {taskid}")
+        )
 
-            # Extract the report ID from the response
-            report_xml = ET.fromstring(start_task)
-            reportid = report_xml.find("report_id").text
+    # Display a warning message
+    print(
+        colored(
+            f"[WARNING] Only use this tool against authorised targets. You are responsible for your actions!\n",
+            "light_yellow",
+            attrs=["bold"],
+        )
+    )
+    time.sleep(2.5)
 
-            gvm_text = colored("Scanning...", "white")
-            logger.info("Scan started")
+    # Create directories for storing outputs if they don't already exist
+    os.makedirs("openvas_reports", exist_ok=True)
+    os.makedirs("custom_reports", exist_ok=True)
+    os.makedirs("nuclei_results", exist_ok=True)
+    os.makedirs("nikto_results", exist_ok=True)
+    os.makedirs("result_graphs", exist_ok=True)
 
-            print(gvm_text)
+    # Update the configuration file with provided arguments
+    update_config_file(
+        args.config,
+        args.username,
+        args.password,
+        args.path,
+        args.port_list_name,
+        args.scan_config,
+        args.scanner,
+        args.target_name,
+        args.target_ip,
+        args.task_name,
+    )
 
-            # Monitor the status of the task until it's completed
-            task_status = ""
-            while task_status not in ["Done", "Stopped", "Failed"]:
-                # Checks the status of the scan every 30 seconds, increase this value if timeout errors persist
-                time.sleep(30)
-                task_response = gmp.get_task(task_id=taskid)
-                task_status_xml = ET.fromstring(task_response)
-                task_status = task_status_xml.find(".//status").text
+    # Read configuration settings from the updated config.ini file
+    config = configparser.ConfigParser()
+    config.read(args.config)
 
-            print(colored(f"Scan completed, status: {task_status}", "white"))
-            logger.info(f"Scan completed, status: {task_status}")
+    # Extract configuration values
+    path = config["connection"]["path"]
+    username = config["connection"]["username"]
+    password = config["connection"]["password"]
+    target_name = config["target"]["target_name"]
+    target_ip = config["target"]["target_ip"]
+    port_list_name = config["target"]["port_list_name"]
+    task_name = config["task"]["task_name"]
+    scan_config = config["task"]["scan_config"]
+    scanner = config["task"]["scanner"]
 
-            if task_status == "Done":
-                completion_time = time.strftime("%H:%M:%S %Y/%m/%d")
-                print(
-                    colored(f"[{completion_time}] [INFO]", "cyan")
-                    + " Greenbone vulnerability scan completed\n"
-                )
-                print(
-                    colored(
-                        ">>> Report Summary",
-                        attrs=["bold"],
-                    )
-                )
+    # Run Nuclei Scans
+    update_nuclei()  # Update Nuclei templates
+    run_nuclei_scans(
+        nuclei_target_dir="nuclei_results", nuclei_target_file="targets.txt"
+    )
 
-                # Report summary logic
-                try:
-                    # Get XML report
-                    xml_report_response = gmp.get_report(
-                        report_id=reportid,
-                        report_format_id="a994b278-1f62-11e1-96ac-406186ea4fc5",  # XML report format ID
-                        ignore_pagination=True,
-                        details=True,
-                    )
+    # Run Nikto Scans
+    nikto_combined_output_file = run_nikto_scans(
+        nikto_target_dir="nikto_results", nikto_target_file="targets.txt"
+    )
 
-                    def get_count_value(element, path):
-                        """
-                        Helper function to extract count values from XML.
+    # Update Greenbone Vulnerability Manager feeds
+    update_nvt()
+    update_scap()
+    update_cert()
 
-                        Args:
-                            element (Element): XML element to search within.
-                            path (str): XPath to the desired count element.
+    # Run OpenVAS scan and get the path to the generated CSV report and task details
+    (
+        csv_path,
+        task_name,
+        hosts_count,
+        high_count,
+        medium_count,
+        low_count,
+        os_count,
+        apps_count,
+    ) = openvas_scan(
+        path,
+        username,
+        password,
+        target_name,
+        target_ip,
+        port_list_name,
+        task_name,
+        scan_config,
+        scanner,
+    )
 
-                        Returns:
-                            int: The count value extracted from the XML.
-                        """
-                        count_element = element.find(path)
-                        return int(count_element.text)
+    # Generate the report using the generated CSV report path and Nikto CSV path
+    if csv_path:
+        generate_report(
+            csv_path,
+            task_name,
+            hosts_count,
+            high_count,
+            medium_count,
+            low_count,
+            os_count,
+            apps_count,
+            nikto_csv_path=nikto_combined_output_file,
+        )
+    else:
+        print("Failed to generate the CSV report, skipping report generation.")
 
-                    rep_xml = ET.fromstring(xml_report_response)
-                    hosts_count = get_count_value(rep_xml, ".//hosts/count")
-                    os_count = get_count_value(rep_xml, ".//os/count")
-                    apps_count = get_count_value(rep_xml, ".//apps/count")
-                    high_count = 0
-                    medium_count = 0
-                    low_count = 0
+    # Write counts to counts.json
+    counts = {
+        "hosts_count": hosts_count,
+        "apps_count": apps_count,
+        "os_count": os_count,
+        "high_count": high_count,
+        "medium_count": medium_count,
+        "low_count": low_count
+    }
 
-                    # Count vulnerabilities by severity
-                    for threat in rep_xml.findall(".//original_threat"):
-                        level = threat.text
-                        if level == "High":
-                            high_count += 1
-                        elif level == "Medium":
-                            medium_count += 1
-                        elif level == "Low":
-                            low_count += 1
+    with open('counts.json', 'w') as f:
+        json.dump(counts, f)
+    
+    # Exploitation Module & Globally Defined Variables
+    connectest = False
+    connectfail = "Connection to the Metasploit RPC server has failed. Attempting again in 10 seconds."
+    exploitedcves = 0
+    incompatiblecves = 0
+    noexploitcve = 0
+    nxcvelist = ['0']
+    rowcounter = 0
+    
+    reportcreation()
+    subprocess.run(["msfrpcd -P kali"], shell = True)
+    rpcconnect(connectest, connectfail)
+    openvasread(rowcounter)
+    reportfinalise(incompatiblecve)
 
-                    # Display the report summary
-                    print(
-                        colored("- Hosts Scanned", "cyan")
-                        + colored(f"              : {hosts_count}", "white")
-                    )
-                    print(
-                        colored("- Applications Scanned", "cyan")
-                        + colored(f"       : {apps_count}", "white")
-                    )
-                    print(
-                        colored("- Operating Systems Scanned", "cyan")
-                        + colored(f"  : {os_count}", "white")
-                    )
 
-                    print(
-                        colored("- High Vulnerabilities", "cyan")
-                        + colored(f"       : {high_count}", "red", attrs=["bold"])
-                    )
-                    print(
-                        colored("- Medium vulnerabilities", "cyan")
-                        + colored(f"     : {medium_count}", "yellow", attrs=["bold"])
-                    )
-                    print(
-                        colored("- Low vulnerabilities", "cyan")
-                        + colored(f"        : {low_count}\n", "green", attrs=["bold"])
-                    )
-                except Exception as e:
-                    print(colored(f"[ERROR] Unable to print report summary: {e}"))
-
-                print(
-                    colored(f"[{completion_time}] [INFO]", "cyan")
-                    + " Downloading report"
-                )
-
-                try:
-                    # Get PDF report
-                    pdf_report_response = gmp.get_report(
-                        report_id=reportid,
-                        report_format_id="c402cc3e-b531-11e1-9163-406186ea4fc5",  # PDF report format ID
-                        ignore_pagination=True,
-                        details=True,
-                    )
-
-                    # Creates a timestamp
-                    timestamp = time.strftime("%Y:%m:%d_%H:%M:%S")
-                    # Creates the filename for the report
-                    pdf_filename = os.path.join(
-                        "openvas_reports", f"openvas_{task_name}_report_{timestamp}.pdf"
-                    )
-
-                    # Extracts the report content from the response
-                    root = ET.fromstring(pdf_report_response)
-                    report_element = root.find("report")
-                    content = report_element.find(
-                        "report_format"
-                    ).tail.strip()  # Extract the base64-encoded PDF Content
-                    binary_pdf = b64decode(
-                        content.encode("ascii")
-                    )  # Decode the base64 content into binary PDF data
-
-                    # Save the PDF to a file with the constructed filename
-                    pdf_path = Path(
-                        pdf_filename
-                    ).expanduser()  # Create the full path for the PDF file
-                    pdf_path.write_bytes(
-                        binary_pdf
-                    )  # Write the binary data to the file
-                    time.sleep(5)
-                    print(
-                        colored("[INFO]", "cyan")
-                        + f" PDF Report downloaded as"
-                        + colored(f" {pdf_path}", attrs=["bold"])
-                    )
-                    logger.info(f"PDF report downloaded as {pdf_path}")
-                except Exception as e:
-                    print(colored(f"[ERROR] Failed to download PDF report: {e}", "red"))
-                    logger.error(f"Failed to download PDF report: {e}")
-
-                # Writes the csv file
-                try:
-                    time.sleep(10)  # Wait to ensure the report is ready
-
-                    csv_report_format_id = "c1645568-627a-11e3-a660-406186ea4fc5"
-
-                    # Retrieve CSV report
-                    csv_report_response = gmp.get_report(
-                        report_id=reportid,
-                        report_format_id=csv_report_format_id,
-                        ignore_pagination=True,
-                        details=True,
-                    )
-
-                    csv_root = ET.fromstring(csv_report_response)
-                    csv_element = csv_root.find("report")
-
-                    if csv_element is not None:
-                        csv_content = csv_element.find("report_format").tail
-                        if csv_content:
-                            binary_base64_encoded_csv = csv_content.encode("ascii")
-                            binary_csv = b64decode(binary_base64_encoded_csv)
-                            csv_filename = os.path.join(
-                                "openvas_reports", f"{task_name}_report_{timestamp}.csv"
-                            )
-                            csv_path = Path(csv_filename).expanduser()
-                            csv_path.write_bytes(binary_csv)
-
-                            print(
-                                colored("[INFO]", "cyan")
-                                + f" CSV Report downloaded as"
-                                + colored(f" {csv_path}", attrs=["bold"])
-                            )
-                            logger.info(f"CSV report downloaded as {csv_path}")
-
-                            # Return the necessary information for report generation
-                            return (
-                                str(csv_path),
-                                str(task_name),
-                                hosts_count,
-                                high_count,
-                                medium_count,
-                                low_count,
-                                apps_count,
-                                os_count,
-                            )
-
-                        print(
-                            colored(f"[{print_timestamp}] [+]", "cyan")
-                            + " Greenbone scan completed.\n"
-                        )
-                        logger.info("Greenbone scan completed\n")
-
-                except Exception as e:
-                    print(colored(f"[ERROR] Failed to download CSV report: {e}", "red"))
-                    logger.error(f"Failed to download CSV report: {e}")
-    except GvmError as e:
-        # Handle GVM-specific errors
-        print(colored(f"[ERROR] An error occurred: {e}", "red"))
-        logger.error(f"A GVM error occurred: {e}")
-    except Exception as e:
-        # Handle any unexpected exceptions
-        print(colored(f"[ERROR] An unexpected error occurred: {e}", "red"))
-        logger.error(f"An unexpected error occurred: {e}\n")
+if __name__ == "__main__":
+    main()
