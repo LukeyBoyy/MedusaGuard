@@ -132,20 +132,20 @@ def main():
     scanner = config["task"]["scanner"]
 
     # Run Nuclei Scans
-    update_nuclei()  # Update Nuclei templates
-    run_nuclei_scans(
-        nuclei_target_dir="nuclei_results", nuclei_target_file="targets.txt"
-    )
+    #update_nuclei()  # Update Nuclei templates
+    #run_nuclei_scans(
+    #    nuclei_target_dir="nuclei_results", nuclei_target_file="targets.txt"
+    #)
 
     # Run Nikto Scans
-    nikto_combined_output_file = run_nikto_scans(
-        nikto_target_dir="nikto_results", nikto_target_file="targets.txt"
-    )
+    #nikto_combined_output_file = run_nikto_scans(
+    #    nikto_target_dir="nikto_results", nikto_target_file="targets.txt"
+    #)
 
     # Update Greenbone Vulnerability Manager feeds
-    update_nvt()
-    update_scap()
-    update_cert()
+    #update_nvt()
+    #update_scap()
+    #update_cert()
 
     # Run OpenVAS scan and get the path to the generated CSV report and task details
     (
@@ -180,7 +180,7 @@ def main():
             low_count,
             os_count,
             apps_count,
-            nikto_csv_path=nikto_combined_output_file,
+            #nikto_csv_path=nikto_combined_output_file,
         )
     else:
         print("Failed to generate the CSV report, skipping report generation.")
