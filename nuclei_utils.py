@@ -175,3 +175,5 @@ def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
         + " All Nuclei scans completed and files cleaned up.\n"
     )
     logger.info("All Nuclei scans completed and files cleaned up.\n")
+
+    return nuclei_combined_output_file
