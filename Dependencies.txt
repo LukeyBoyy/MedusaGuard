@@ -1,1 +1,6 @@
 sudo apt install gnome-terminal
+pip install termcolor
+pip install pandas
+pip install matplotlib
+pip install python-gvm
+pip install pymetasploit3
