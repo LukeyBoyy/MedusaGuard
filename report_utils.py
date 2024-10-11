@@ -22,12 +22,45 @@ from pathlib import Path
 from termcolor import colored
 
 
-def add_page_number(canvas, doc):
+def add_first_page_header(canvas, doc):
     """
-    Add a page number to the canvas footer with a line above it, formatted as "1 | Page".
+    Add a header image and page number to the first page.
+
+    This function is used as a callback by the ReportLab library to add a header
+    and page numbers to the first page of the PDF document during generation.
+
+    Args:
+        canvas (Canvas): The canvas object representing the current page.
+        doc (DocumentTemplate): The document template being used.
+    """
+    # Add the header image
+    header_image_path = "assets/pdf_header.png"  # Path to your header image
+
+    if os.path.exists(header_image_path):
+        canvas.drawImage(header_image_path, 30, doc.pagesize[1] - 80, width=550, height=50)
+    else:
+        print(colored(f"[WARNING] Header image not found at path: {header_image_path}", "red"))
+
+    # Add the page number at the footer
+    page_num = canvas.getPageNumber()
+    text = f"{page_num} | Page"
+
+    # Draw a line above the page number (horizontally across the width of the page)
+    canvas.setStrokeColor(colors.lightgrey)
+    canvas.setLineWidth(0.5)
+    canvas.line(10 * mm, 20 * mm, 200 * mm, 20 * mm)
+
+    # Set font and draw the page number text
+    canvas.setFont("Helvetica", 10)
+    canvas.drawRightString(200 * mm, 15 * mm, text)
+
+
+def add_later_page_number(canvas, doc):
+    """
+    Add a page number to the canvas footer for later pages.
 
     This function is used as a callback by the ReportLab library to add page numbers
-    to each page of the PDF document during generation.
+    to the PDF document during generation for all pages except the first one.
 
     Args:
         canvas (Canvas): The canvas object representing the current page.
@@ -46,7 +79,6 @@ def add_page_number(canvas, doc):
     canvas.setFont("Helvetica", 10)
     canvas.drawRightString(200 * mm, 15 * mm, text)
 
-
 def generate_report(
     csv_path,
     task_name,
@@ -57,6 +89,7 @@ def generate_report(
     os_count,
     apps_count,
     nikto_csv_path=None,
+    nuclei_combined_output_file=None,
 ):
     """
     Generate an executive PDF report based on the scan results.
@@ -78,6 +111,7 @@ def generate_report(
         os_count (int): Number of operating systems scanned.
         apps_count (int): Number of applications scanned.
         nikto_csv_path (str, optional): Path to the Nikto scan results CSV file. Defaults to None.
+        nuclei_combined_output_file (str, optional): Path to the combined nuclei scan results. Defaults to None.
     """
     # Generate a timestamp for filenames
     completion_time = time.strftime("%H-%M-%S_%Y-%m-%d")
@@ -435,190 +469,223 @@ def generate_report(
         # --- Executive Summary ---
         elements.append(Paragraph("1. Executive Summary", styleH))
 
-        # Generate the executive summary based on the number of high vulnerabilities
-        if high_count <= 3:
-            exec_summary = (
-                f"The purpose of this vulnerability scan was to identify weaknesses within our IT infrastructure "
-                f"that could be exploited by attackers, potentially leading to financial loss, regulatory penalties, "
-                f"or damage to our reputation. Of the {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, "
-                f"with {high_vulns} categorized as high, posing the most significant risk. Immediate remediation of any high vulnerabilities "
-                f"identified is necessary to avoid potential business disruptions and ensure the continued trust of our customers. "
-                f"This report provides detailed findings and actionable recommendations to mitigate these risks, safeguarding our operations."
-            )
-        elif high_count > 4:
-            exec_summary = (
-                f"The vulnerability scan identified several high-risk vulnerabilities within our IT infrastructure. "
-                f"Out of the {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, with {high_vulns} being high-risk. "
-                f"These should be addressed promptly to avoid potential security breaches."
-                f"This report provides detailed findings and actionable recommendations to mitigate these risks, safeguarding our operations."
-            )
-        else:
-            exec_summary = (
-                f"The vulnerability scan did not identify any high-risk vulnerabilities. "
-                f"Out of the {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, with none classified as high risk "
-                f"{medium_vulns} classified as medium risk, and {low_vulns} classified as low risk. Therefore, our IT infrastructure shows "
-                f"a strong security posture, though continuous monitoring and improvement are still recommended. "
-            )
+        summary_availabe = all([
+            hosts_scanned is not None,
+            total_vulns is not None,
+            high_vulns is not None,
+            medium_vulns is not None,
+            low_vulns is not None
+        ])
 
-        elements.append(Paragraph(exec_summary, styleN))
+        if summary_availabe:
+            # Generate the executive summary based on the number of high vulnerabilities
+            if high_count <= 3:
+                exec_summary = (
+                    f"The purpose of this vulnerability scan was to identify weaknesses within our IT infrastructure "
+                    f"that could be exploited by attackers, potentially leading to financial loss, regulatory penalties, "
+                    f"or damage to our reputation. Of the {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, "
+                    f"with {high_vulns} categorized as high, posing the most significant risk. Immediate remediation of any high vulnerabilities "
+                    f"identified is necessary to avoid potential business disruptions and ensure the continued trust of our customers. "
+                    f"This report provides detailed findings and actionable recommendations to mitigate these risks, safeguarding our operations."
+                )
+            elif high_count > 4:
+                exec_summary = (
+                    f"The vulnerability scan identified several high-risk vulnerabilities within our IT infrastructure. "
+                    f"Out of the {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, with {high_vulns} being high-risk. "
+                    f"These should be addressed promptly to avoid potential security breaches."
+                    f"This report provides detailed findings and actionable recommendations to mitigate these risks, safeguarding our operations."
+                )
+            else:
+                exec_summary = (
+                    f"The vulnerability scan did not identify any high-risk vulnerabilities. "
+                    f"Out of the {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, with none classified as high risk "
+                    f"{medium_vulns} classified as medium risk, and {low_vulns} classified as low risk. Therefore, our IT infrastructure shows "
+                    f"a strong security posture, though continuous monitoring and improvement are still recommended. "
+                )
+
+            elements.append(Paragraph(exec_summary, styleN))
+        else:
+            # Data is missing; inform the reader
+            no_data_message = Paragraph(
+                "The Executive Summary cannot be generated as essential vulnerability data is missing. "
+                "Please ensure that all necessary data is provided to generate a comprehensive summary of the vulnerability scan results.",
+                styleN
+            )
+            elements.append(no_data_message)
+
         elements.append(Spacer(1, 0.5 * inch))
 
         # --- Key Findings ---
         elements.append(Paragraph("2. Key Findings", styleH))
 
-        # Styles for the vulnerability counts
-        count_style = ParagraphStyle(
-            name="count",
-            alignment=1,  # Centered text
-            fontSize=18,
-            textColor=colors.whitesmoke,
-            spaceAfter=6,
-            fontName="Helvetica",
-        )
-
-        label_style = ParagraphStyle(
-            name="label",
-            alignment=1,  # Centered text
-            fontSize=8,
-            textColor=colors.whitesmoke,
-            spaceBefore=0,
-            fontName="Helvetica-Bold",
-        )
-
-        # Data for the counts table
-        data = [
-            [
-                Paragraph(str(high_vulns), count_style),
-                Paragraph(str(medium_vulns), count_style),
-                Paragraph(str(low_vulns), count_style),
-            ],
-            [
-                Paragraph("HIGH", label_style),
-                Paragraph("MEDIUM", label_style),
-                Paragraph("LOW", label_style),
-            ],
-        ]
-
-        # Create the counts table
-        table = Table(
-            data,
-            colWidths=[2.25 * inch, 2.25 * inch, 2.25 * inch],
-            rowHeights=[0.75 * inch, 0.3 * inch],
-        )
-        table.setStyle(
-            TableStyle(
-                [
-                    (
-                        "BACKGROUND",
-                        (0, 0),
-                        (0, 0),
-                        colors.HexColor("#E74C3C"),
-                    ),  # Red background for High
-                    (
-                        "BACKGROUND",
-                        (1, 0),
-                        (1, 0),
-                        colors.HexColor("#F39C12"),
-                    ),  # Orange background for Medium
-                    (
-                        "BACKGROUND",
-                        (2, 0),
-                        (2, 0),
-                        colors.HexColor("#2ECC71"),
-                    ),  # Green background for Low
-                    (
-                        "TEXTCOLOR",
-                        (0, 0),
-                        (-1, 0),
-                        colors.whitesmoke,
-                    ),  # White text color for counts
-                    (
-                        "TEXTCOLOR",
-                        (0, 1),
-                        (-1, 1),
-                        colors.whitesmoke,
-                    ),  # White text color for labels
-                    (
-                        "ALIGN",
-                        (0, 0),
-                        (-1, -1),
-                        "CENTER",
-                    ),  # Center-align text in all cells
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),  # Middle vertical alignment
-                    (
-                        "FONTNAME",
-                        (0, 0),
-                        (-1, 0),
-                        "Helvetica",
-                    ),  # Regular font for counts
-                    (
-                        "BACKGROUND",
-                        (0, 1),
-                        (0, 1),
-                        colors.HexColor("#2C3E50"),
-                    ),  # Dark background for labels
-                    (
-                        "BACKGROUND",
-                        (1, 1),
-                        (1, 1),
-                        colors.HexColor("#2C3E50"),
-                    ),  # Dark background for labels
-                    (
-                        "BACKGROUND",
-                        (2, 1),
-                        (2, 1),
-                        colors.HexColor("#2C3E50"),
-                    ),  # Dark background for labels
-                    (
-                        "BOX",
-                        (0, 0),
-                        (-1, -1),
-                        0.75,
-                        colors.whitesmoke,
-                    ),  # Thicker border around the table
-                ]
-            )
-        )
-
-        # Add the heading
-        heading = Paragraph(
-            "Vulnerability count:",
-            ParagraphStyle(
-                name="Heading1",
-                fontSize=10,
-                alignment=0,  # Aligned-left
-                textColor=colors.black,
-                spaceAfter=12,  # Space after the heading
+        if any([high_vulns, medium_vulns, low_vulns]):
+            # Styles for the vulnerability counts
+            count_style = ParagraphStyle(
+                name="count",
+                alignment=1,  # Centered text
+                fontSize=18,
+                textColor=colors.whitesmoke,
+                spaceAfter=6,
                 fontName="Helvetica",
-            ),
-        )
-
-        elements.append(heading)
-        elements.append(table)
-        elements.append(Spacer(1, 0.25 * inch))
-
-        # Add the pie chart and bar chart side by side
-        chart_table = Table(
-            [
-                [
-                    Image(pie_chart_path, width=2.50 * inch, height=2 * inch),
-                    Image(bar_chart_path, width=2.50 * inch, height=2 * inch),
-                ]
-            ],
-            colWidths=[2.875 * inch, 2.875 * inch],
-        )
-        chart_table.setStyle(
-            TableStyle(
-                [
-                    ("LEFTPADDING", (0, 0), (-1, -1), 12),
-                    ("RIGHTPADDING", (0, 0), (-1, -1), 12),
-                    ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
-                    ("TOPPADDING", (0, 0), (-1, -1), 12),
-                ]
             )
-        )
-        elements.append(chart_table)
-        elements.append(Spacer(1, 0.5 * inch))
+
+            label_style = ParagraphStyle(
+                name="label",
+                alignment=1,  # Centered text
+                fontSize=8,
+                textColor=colors.whitesmoke,
+                spaceBefore=0,
+                fontName="Helvetica-Bold",
+            )
+
+            # Data for the counts table
+            data = [
+                [
+                    Paragraph(str(high_vulns), count_style),
+                    Paragraph(str(medium_vulns), count_style),
+                    Paragraph(str(low_vulns), count_style),
+                ],
+                [
+                    Paragraph("HIGH", label_style),
+                    Paragraph("MEDIUM", label_style),
+                    Paragraph("LOW", label_style),
+                ],
+            ]
+
+            # Create the counts table
+            table = Table(
+                data,
+                colWidths=[2.25 * inch, 2.25 * inch, 2.25 * inch],
+                rowHeights=[0.75 * inch, 0.3 * inch],
+            )
+            table.setStyle(
+                TableStyle(
+                    [
+                        (
+                            "BACKGROUND",
+                            (0, 0),
+                            (0, 0),
+                            colors.HexColor("#E74C3C"),
+                        ),  # Red background for High
+                        (
+                            "BACKGROUND",
+                            (1, 0),
+                            (1, 0),
+                            colors.HexColor("#F39C12"),
+                        ),  # Orange background for Medium
+                        (
+                            "BACKGROUND",
+                            (2, 0),
+                            (2, 0),
+                            colors.HexColor("#2ECC71"),
+                        ),  # Green background for Low
+                        (
+                            "TEXTCOLOR",
+                            (0, 0),
+                            (-1, 0),
+                            colors.whitesmoke,
+                        ),  # White text color for counts
+                        (
+                            "TEXTCOLOR",
+                            (0, 1),
+                            (-1, 1),
+                            colors.whitesmoke,
+                        ),  # White text color for labels
+                        (
+                            "ALIGN",
+                            (0, 0),
+                            (-1, -1),
+                            "CENTER",
+                        ),  # Center-align text in all cells
+                        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),  # Middle vertical alignment
+                        (
+                            "FONTNAME",
+                            (0, 0),
+                            (-1, 0),
+                            "Helvetica",
+                        ),  # Regular font for counts
+                        (
+                            "BACKGROUND",
+                            (0, 1),
+                            (0, 1),
+                            colors.HexColor("#2C3E50"),
+                        ),  # Dark background for labels
+                        (
+                            "BACKGROUND",
+                            (1, 1),
+                            (1, 1),
+                            colors.HexColor("#2C3E50"),
+                        ),  # Dark background for labels
+                        (
+                            "BACKGROUND",
+                            (2, 1),
+                            (2, 1),
+                            colors.HexColor("#2C3E50"),
+                        ),  # Dark background for labels
+                        (
+                            "BOX",
+                            (0, 0),
+                            (-1, -1),
+                            0.75,
+                            colors.whitesmoke,
+                        ),  # Thicker border around the table
+                    ]
+                )
+            )
+
+            # Add the heading
+            heading = Paragraph(
+                "Vulnerability count:",
+                ParagraphStyle(
+                    name="Heading1",
+                    fontSize=10,
+                    alignment=0,  # Aligned-left
+                    textColor=colors.black,
+                    spaceAfter=12,  # Space after the heading
+                    fontName="Helvetica",
+                ),
+            )
+
+            elements.append(heading)
+            elements.append(table)
+            elements.append(Spacer(1, 0.25 * inch))
+
+            if os.path.exists(pie_chart_path) and os.path.exists(bar_chart_path):
+                # Add the pie chart and bar chart side by side
+                chart_table = Table(
+                    [
+                        [
+                            Image(pie_chart_path, width=2.50 * inch, height=2 * inch),
+                            Image(bar_chart_path, width=2.50 * inch, height=2 * inch),
+                        ]
+                    ],
+                    colWidths=[2.875 * inch, 2.875 * inch],
+                )
+                chart_table.setStyle(
+                    TableStyle(
+                        [
+                            ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                            ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+                            ("BOTTOMPADDING", (0, 0), (-1, -1), 12),
+                            ("TOPPADDING", (0, 0), (-1, -1), 12),
+                        ]
+                    )
+                )
+                elements.append(chart_table)
+                elements.append(Spacer(1, 0.5 * inch))
+            else:
+                # If charts are missing, display a message
+                no_charts_message = Paragraph(
+                    "Charts illustrating the vulnerability distribution are not available.", styleN
+                )
+                elements.append(no_charts_message)
+                elements.append(Spacer(1, 0.5 * inch))
+        else:
+            # If no vulnerabilities are found, display a message
+            no_vuln_message = Paragraph(
+                "No vulnerabilities were found during the scan (likely an error).", styleN
+            )
+            elements.append(no_vuln_message)
 
         # --- Top 10 Vulnerabilities ---
         elements.append(Paragraph("3. Top 10 Vulnerabilities", styleH))
@@ -664,65 +731,74 @@ def generate_report(
                 if len(vuln_data) > 10:
                     break  # Stop after adding 10 vulnerabilities
 
-        # Create the vulnerabilities table
-        vuln_table = Table(
-            vuln_data, colWidths=[1.3 * inch, 0.5 * inch, 2.5 * inch, 2.5 * inch]
-        )
-        vuln_table_style = TableStyle(
-            [
-                (
-                    "BACKGROUND",
-                    (0, 0),
-                    (-1, 0),
-                    colors.HexColor("#2C3E50"),
-                ),  # Blue background for the header row
-                (
-                    "TEXTCOLOR",
-                    (0, 0),
-                    (-1, 0),
-                    colors.whitesmoke,
-                ),  # White text color for the header row
-                (
-                    "ALIGN",
-                    (0, 0),
-                    (-1, -1),
-                    "LEFT",
-                ),  # Left-align text for better readability
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 10),  # Reduced font size for better fit
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
-                ("TOPPADDING", (0, 0), (-1, 0), 10),
-                ("BOTTOMPADDING", (1, 0), (-1, -1), 8),
-                ("TOPPADDING", (1, 0), (-1, -1), 8),
-                ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),  # Black grid lines
-                (
-                    "BOX",
-                    (0, 0),
-                    (-1, -1),
-                    0.75,
-                    colors.black,
-                ),  # Thicker border around the table
-                (
-                    "VALIGN",
-                    (0, 0),
-                    (-1, -1),
-                    "TOP",
-                ),  # Align text to the top of each cell
-            ]
-        )
+        # Conditional check: if there are vulnerabilities beyond the header, add the table; else, add a message
+        if len(vuln_data) > 1:
+            # Create the vulnerabilities table
+            vuln_table = Table(
+                vuln_data, colWidths=[1.3 * inch, 0.5 * inch, 2.5 * inch, 2.5 * inch]
+            )
+            vuln_table_style = TableStyle(
+                [
+                    (
+                        "BACKGROUND",
+                        (0, 0),
+                        (-1, 0),
+                        colors.HexColor("#2C3E50"),
+                    ),  # Blue background for the header row
+                    (
+                        "TEXTCOLOR",
+                        (0, 0),
+                        (-1, 0),
+                        colors.whitesmoke,
+                    ),  # White text color for the header row
+                    (
+                        "ALIGN",
+                        (0, 0),
+                        (-1, -1),
+                        "LEFT",
+                    ),  # Left-align text for better readability
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 10),  # Reduced font size for better fit
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
+                    ("TOPPADDING", (0, 0), (-1, 0), 10),
+                    ("BOTTOMPADDING", (1, 0), (-1, -1), 8),
+                    ("TOPPADDING", (1, 0), (-1, -1), 8),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.black),  # Black grid lines
+                    (
+                        "BOX",
+                        (0, 0),
+                        (-1, -1),
+                        0.75,
+                        colors.black,
+                    ),  # Thicker border around the table
+                    (
+                        "VALIGN",
+                        (0, 0),
+                        (-1, -1),
+                        "TOP",
+                    ),  # Align text to the top of each cell
+                ]
+            )
 
-        # Manually alternate row background colors
-        for i in range(1, len(vuln_data)):
-            if i % 2 == 0:
-                bg_color = colors.HexColor("#EAECEE")  # Light gray
-            else:
-                bg_color = colors.HexColor("#F2F3F4")
-            vuln_table_style.add("BACKGROUND", (0, i), (-1, i), bg_color)
+            # Manually alternate row background colors
+            for i in range(1, len(vuln_data)):
+                if i % 2 == 0:
+                    bg_color = colors.HexColor("#EAECEE")  # Light gray
+                else:
+                    bg_color = colors.HexColor("#F2F3F4")
+                vuln_table_style.add("BACKGROUND", (0, i), (-1, i), bg_color)
 
-        vuln_table.setStyle(vuln_table_style)
-        elements.append(vuln_table)
+            vuln_table.setStyle(vuln_table_style)
+            elements.append(vuln_table)
+        else:
+            # No vulnerabilities found
+            no_vuln_message = Paragraph(
+                "No vulnerabilities were found during the scan.", styleN
+            )
+            elements.append(no_vuln_message)
+
         elements.append(Spacer(1, 0.75 * inch))
 
         # --- Recommendations ---
@@ -847,7 +923,7 @@ def generate_report(
             "you can refer to this table to determine what actions should be taken."
         )
         elements.append(Paragraph(reccomended_actions_text, styleN))
-        elements.append(Spacer(1, 0.5 * inch))
+        elements.append(Spacer(1, 0.25 * inch))
         actions_data = [
             ["Severity", "Description", "Recommended Actions"],
             [
@@ -935,14 +1011,6 @@ def generate_report(
         elements.append(Spacer(1, 0.75 * inch))  # Increased spacing
 
         # Appendix: Detailed Vulnerability List
-        elements.append(Paragraph("Appendix: Detailed Vulnerability List", styleH))
-        detailed_vulnerability_text = (
-            "The following table outlines all of the vulnerabilities identified using the scan accompanied by important information "
-            "such as the impacted host, severity level, summary, and solution."
-        )
-        elements.append(Paragraph(detailed_vulnerability_text, styleN))
-        elements.append(Spacer(1, 0.5 * inch))
-
         # Extract relevant columns for the detailed vulnerability list
         detailed_vulns = df[["IP", "Severity", "Summary", "Solution"]]
 
@@ -960,72 +1028,85 @@ def generate_report(
                 ]
             )
 
-        detailed_vulns_table = Table(
-            detailed_vulns_data,
-            colWidths=[1.2 * inch, 0.7 * inch, 2.3 * inch, 2.6 * inch],
-        )
+        if detailed_vulns is not None and not detailed_vulns.empty and len(detailed_vulns_data) > 1:
+            elements.append(Paragraph("Appendix: Detailed Vulnerability List", styleH))
+            detailed_vulnerability_text = (
+                "The following table outlines all of the vulnerabilities identified using the scan accompanied by important information "
+                "such as the impacted host, severity level, summary, and solution."
+            )
+            elements.append(Paragraph(detailed_vulnerability_text, styleN))
+            elements.append(Spacer(1, 0.25 * inch))
 
-        detailed_vulns_table_style = TableStyle(
-            [
-                (
-                    "BACKGROUND",
-                    (0, 0),
-                    (-1, 0),
-                    colors.HexColor("#2C3E50"),
-                ),  # Blue background for the header row
-                (
-                    "TEXTCOLOR",
-                    (0, 0),
-                    (-1, 0),
-                    colors.whitesmoke,
-                ),  # White text color for the header row
-                (
-                    "ALIGN",
-                    (0, 0),
-                    (-1, -1),
-                    "LEFT",
-                ),  # Left-align text for better readability
-                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                (
-                    "FONTSIZE",
-                    (0, 0),
-                    (-1, -1),
-                    10,
-                ),  # Slightly reduced font size for better fit
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 10),  # Added padding
-                ("TOPPADDING", (0, 0), (-1, 0), 10),  # Added padding
-                ("BOTTOMPADDING", (1, 0), (-1, -1), 8),
-                ("TOPPADDING", (1, 0), (-1, -1), 8),
-                ("LEFTPADDING", (0, 0), (-1, -1), 6),  # Added padding
-                ("RIGHTPADDING", (0, 0), (-1, -1), 6),  # Added padding
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),  # Black grid lines
-                (
-                    "BOX",
-                    (0, 0),
-                    (-1, -1),
-                    0.75,
-                    colors.black,
-                ),  # Thicker border around the table
-                (
-                    "VALIGN",
-                    (0, 0),
-                    (-1, -1),
-                    "TOP",
-                ),  # Align text to the top of each cell
-            ]
-        )
 
-        # Manually alternate row background colors
-        for i in range(1, len(detailed_vulns_data)):
-            if i % 2 == 0:
-                bg_color = colors.HexColor("#EAECEE")  # Light gray
-            else:
-                bg_color = colors.HexColor("#F2F3F4")
-            detailed_vulns_table_style.add("BACKGROUND", (0, i), (-1, i), bg_color)
+            detailed_vulns_table = Table(
+                detailed_vulns_data,
+                colWidths=[1.2 * inch, 0.7 * inch, 2.3 * inch, 2.6 * inch],
+            )
 
-        detailed_vulns_table.setStyle(detailed_vulns_table_style)
-        elements.append(detailed_vulns_table)
-        elements.append(Spacer(1, 0.75 * inch))  # Increased spacing
+            detailed_vulns_table_style = TableStyle(
+                [
+                    (
+                        "BACKGROUND",
+                        (0, 0),
+                        (-1, 0),
+                        colors.HexColor("#2C3E50"),
+                    ),  # Blue background for the header row
+                    (
+                        "TEXTCOLOR",
+                        (0, 0),
+                        (-1, 0),
+                        colors.whitesmoke,
+                    ),  # White text color for the header row
+                    (
+                        "ALIGN",
+                        (0, 0),
+                        (-1, -1),
+                        "LEFT",
+                    ),  # Left-align text for better readability
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    (
+                        "FONTSIZE",
+                        (0, 0),
+                        (-1, -1),
+                        10,
+                    ),  # Slightly reduced font size for better fit
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 10),  # Added padding
+                    ("TOPPADDING", (0, 0), (-1, 0), 10),  # Added padding
+                    ("BOTTOMPADDING", (1, 0), (-1, -1), 8),
+                    ("TOPPADDING", (1, 0), (-1, -1), 8),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 6),  # Added padding
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),  # Added padding
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.black),  # Black grid lines
+                    (
+                        "BOX",
+                        (0, 0),
+                        (-1, -1),
+                        0.75,
+                        colors.black,
+                    ),  # Thicker border around the table
+                    (
+                        "VALIGN",
+                        (0, 0),
+                        (-1, -1),
+                        "TOP",
+                    ),  # Align text to the top of each cell
+                ]
+            )
+
+            # Manually alternate row background colors
+            for i in range(1, len(detailed_vulns_data)):
+                if i % 2 == 0:
+                    bg_color = colors.HexColor("#EAECEE")  # Light gray
+                else:
+                    bg_color = colors.HexColor("#F2F3F4")
+                detailed_vulns_table_style.add("BACKGROUND", (0, i), (-1, i), bg_color)
+
+            detailed_vulns_table.setStyle(detailed_vulns_table_style)
+            elements.append(detailed_vulns_table)
+            elements.append(Spacer(1, 0.75 * inch))  # Increased spacing
+        else:
+            elements.append(Paragraph("No Detailed Vulnerability List was provided.", styleN))
+            elements.append(Spacer(1, 0.75 * inch))
 
         # Appendix: Nikto Scan Results
         elements.append(Spacer(1, 0.5 * inch))
@@ -1035,7 +1116,7 @@ def generate_report(
             "identified during the assessment."
         )
         elements.append(Paragraph(nikto_text, styleN))
-        elements.append(Spacer(1, 0.5 * inch))
+        elements.append(Spacer(1, 0.25 * inch))
 
         if nikto_df is not None and not nikto_df.empty:
             # Prepare Nikto data for the table
@@ -1085,8 +1166,74 @@ def generate_report(
         else:
             elements.append(Paragraph("No Nikto scan results were provided.", styleN))
 
+        # Appendix: Nuclei Scan Results
+        elements.append(Spacer(1, 0.75 * inch))  # Increased spacing
+        elements.append(Paragraph("Appendix: Nuclei Scan Results", styleH))
+        nuclei_text = (
+            "The following table presents the results from the Nuclei scan, detailing vulnerabilities "
+            "identified during the assessment."
+        )
+        elements.append(Paragraph(nuclei_text, styleN))
+        elements.append(Spacer(1, 0.25 * inch))
+
+        if nuclei_combined_output_file and os.path.exists(nuclei_combined_output_file):
+            with open(nuclei_combined_output_file, "r") as nuclei_file:
+                nuclei_lines = nuclei_file.readlines()
+
+            # Prepare data for the Nuclei table
+            nuclei_table_data = [["Vulnerability", "Protocol", "Severity", "Target"]]
+            for line in nuclei_lines:
+                # Remove any square brackets and extra spaces from the line
+                line = line.replace("[", "").replace("]", "").strip()
+                parts = line.split()  # Split the line into parts
+
+                if len(parts) >= 4:
+                    nuclei_table_data.append(
+                        [
+                            Paragraph(parts[0], styleN),  # Vulnerability
+                            Paragraph(parts[1], styleN),  # Protocol
+                            Paragraph(parts[2], styleN),  # Severity
+                            Paragraph(" ".join(parts[3:]), styleN),  # Target
+                        ]
+                    )
+
+            nuclei_table = Table(
+                nuclei_table_data,
+                colWidths=[1.75 * inch, 1.0 * inch, 1.0 * inch, 3.0 * inch],
+            )
+
+            nuclei_table_style = TableStyle(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2C3E50")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                    ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                    ("FONTSIZE", (0, 0), (-1, -1), 9),
+                    ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
+                    ("TOPPADDING", (0, 0), (-1, 0), 10),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ]
+            )
+
+            # Alternate row colors
+            for i in range(1, len(nuclei_table_data)):
+                bg_color = (
+                    colors.HexColor("#EAECEE")
+                    if i % 2 == 0
+                    else colors.HexColor("#F2F3F4")
+                )
+                nuclei_table_style.add("BACKGROUND", (0, i), (-1, i), bg_color)
+
+            nuclei_table.setStyle(nuclei_table_style)
+            elements.append(nuclei_table)
+        else:
+            elements.append(Paragraph("No Nuclei scan results were provided.", styleN))
+
         # Build PDF and add page numbers to each page
-        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        doc.build(elements, onFirstPage=add_first_page_header, onLaterPages=add_later_page_number)
 
         print(
             colored("[INFO]", "cyan")
