@@ -16,7 +16,6 @@ from nikto_utils import run_nikto_scans
 from exploit_module import *
 
 
-sys.stdout.reconfigure(line_buffering=True)
 
 def main():
     """
@@ -133,7 +132,7 @@ def main():
 
     # Run Nuclei Scans
     update_nuclei()  # Update Nuclei templates
-    run_nuclei_scans(
+    nuclei_combined_output_file = run_nuclei_scans(
         nuclei_target_dir="nuclei_results", nuclei_target_file="targets.txt"
     )
 
@@ -181,6 +180,7 @@ def main():
             os_count,
             apps_count,
             nikto_csv_path=nikto_combined_output_file,
+            nuclei_combined_output_file=nuclei_combined_output_file,
         )
     else:
         print("Failed to generate the CSV report, skipping report generation.")
