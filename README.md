@@ -81,7 +81,7 @@ git clone https://github.com/YourUsername/MedusaGuard.git
 # Navigate to the directory
 cd MedusaGuard
 
-# Install necessary dependencies (example)
+# Install necessary dependencies
 pip install -r requirements.txt
 ```
 
