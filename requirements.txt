@@ -1,0 +1,12 @@
+pymetasploit3==1.0.6
+termcolor==1.1.0
+tkcalendar==1.6.1
+Pillow==9.4.0
+pytz==2023.3
+configparser==5.0.2
+schedule==1.1.0
+matplotlib==3.8.0
+reportlab==3.6.12
+pandas==2.1.0
+gvm-tools==24.8.0
+
