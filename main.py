@@ -170,20 +170,20 @@ def main():
     )
 
     # Generate the report using the generated CSV report path and Nikto CSV path
-    if csv_path:
-        generate_report(
-            csv_path,
-            task_name,
-            hosts_count,
-            high_count,
-            medium_count,
-            low_count,
-            os_count,
-            apps_count,
+    #if csv_path:
+    #    generate_report(
+    #        csv_path,
+    #        task_name,
+    #        hosts_count,
+    #        high_count,
+    #        medium_count,
+    #        low_count,
+    #        os_count,
+    #        apps_count,
             #nikto_csv_path=nikto_combined_output_file,
-        )
-    else:
-        print("Failed to generate the CSV report, skipping report generation.")
+    #    )
+    #else:
+    #    print("Failed to generate the CSV report, skipping report generation.")
 
     # Write counts to counts.json
     counts = {
@@ -199,19 +199,19 @@ def main():
         json.dump(counts, f)
     
     # Exploitation Module & Globally Defined Variables
-    connectest = False
-    connectfail = "Connection to the Metasploit RPC server has failed. Attempting again in 10 seconds."
-    exploitedcves = 0
-    incompatiblecves = 0
-    noexploitcve = 0
-    nxcvelist = ['0']
-    rowcounter = 0
+    #connectest = False
+    #connectfail = "Connection to the Metasploit RPC server has failed. Attempting again in 10 seconds."
+    #exploitedcves = 0
+    #incompatiblecves = 0
+    #noexploitcve = 0
+    #nxcvelist = ['0']
+    #rowcounter = 0
     
-    reportcreation()
-    subprocess.run(["msfrpcd -P kali"], shell = True)
-    rpcconnect(connectest, connectfail)
-    openvasread(rowcounter)
-    reportfinalise(incompatiblecve)
+    #reportcreation()
+    #subprocess.run(["msfrpcd -P kali"], shell = True)
+    #rpcconnect(connectest, connectfail)
+    #openvasread(rowcounter)
+    #reportfinalise(incompatiblecve)
 
 
 if __name__ == "__main__":
