@@ -90,6 +90,7 @@ pip install -r requirements.txt
 ## **Quick Start Guide for Medusa Guard**
 [MedusaGuard - Getting Started Guide.pdf](https://github.com/user-attachments/files/17359582/MedusaGuard.-.Getting.Started.Guide.pdf)
 
+---
 
 ## **License**  
 This project is licensed under the terms of the [Apache License Version 2.0](https://www.apache.org/licenses/LICENSE-2.0) and is available for free.
