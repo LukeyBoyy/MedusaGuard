@@ -176,6 +176,20 @@ def main():
     else:
         exploitedcves, incompatiblecves, reportname = 0, 0, None  # Default values if csv_path is not available
 
+    # Write counts to counts.json
+    counts = {
+        "hosts_count": hosts_count,
+        "apps_count": apps_count,
+        "os_count": os_count,
+        "high_count": high_count,
+        "medium_count": medium_count,
+        "low_count": low_count,
+        "exploitedcves": exploitedcves,
+        "incompatiblecves": incompatiblecves
+    }
+    with open('counts.json', 'w') as f:
+        json.dump(counts, f)
+
     # Generate the report using the generated CSV report path and Nikto CSV path
     if csv_path:
         generate_report(
@@ -195,21 +209,6 @@ def main():
         )
     else:
         print("Failed to generate the CSV report, skipping report generation.")
-
-    # Write counts to counts.json
-    counts = {
-        "hosts_count": hosts_count,
-        "apps_count": apps_count,
-        "os_count": os_count,
-        "high_count": high_count,
-        "medium_count": medium_count,
-        "low_count": low_count,
-        "exploitedcves": exploitedcves,
-        "incompatiblecves": incompatiblecves
-    }
-
-    with open('counts.json', 'w') as f:
-        json.dump(counts, f)
 
     # Calculate and print the duration of the script execution
     end_time = time.time()
