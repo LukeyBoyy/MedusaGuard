@@ -33,6 +33,19 @@ from tkinter import (
     OptionMenu,
 )
 
+"""
+MedusaGuard GUI Application
+
+This script implements the graphical user interface (GUI) for MedusaGuard, an automated vulnerability scanning
+and exploitation tool. The GUI provides functionalities for starting/stopping scans, scheduling scans,
+editing configurations, and viewing scan results.
+
+The application is structured using Tkinter frames to represent different pages:
+- Dashboard Frame: Main interface for initiating scans and viewing results.
+- Edit Configuration Frame: Interface for editing scanning configurations.
+- Schedule Frame: Interface for scheduling scans at specified times.
+
+"""
 
 # -------------------------------------------
 # Global Variables and Helper Functions
@@ -55,12 +68,16 @@ start_scan_log_image = None   # Placeholder for start scan image
 stop_scan_log_image = None    # Placeholder for stop scan image
 cycling_images = False        # Flag to indicate if images should cycle during scan
 current_image_index = 0       # Index for cycling images
-new_vuln_image = None         # Global variable to hold the new vuln pie graph image after a scan
+new_vuln_image = None         # Holds the new vulnerability pie chart image after a scan
+new_exploit_image = None      # Holds the new exploit pie chart image after a scan
 
 
 def on_closing():
     """
     Handles the window close event by displaying a custom confirmation dialog.
+
+    This function overrides the default window close behavior to prompt the user
+    with a confirmation dialog before exiting the application.
     """
 
     # Create a custom dialog
@@ -372,9 +389,11 @@ def process_output_queue():
 
     Re-enables the Start Scan button when the scan is complete.
     """
-    global cycling_images  # Add cycling_images here
-    global new_vuln_image  # Declare new_vuln_image as global
+    global cycling_images     # Add cycling_images here
+    global new_vuln_image     # Declare new_vuln_image as global
     global vuln_image_label
+    global new_exploit_image  # Declare new_exploit_image as global
+    global exploit_image_label
     try:
         while True:
             line = output_queue.get_nowait()
@@ -391,10 +410,14 @@ def process_output_queue():
                 try:
                     # Load the new image
                     new_vuln_image = PhotoImage(file='result_graphs/vuln_pie.png')
+                    new_exploit_image = PhotoImage(file='result_graphs/exploit_pie.png')
                     # Update the vuln_image_label with the new image
                     vuln_image_label.config(image=new_vuln_image)
+                    # Update the exploit_image_label with the new image
+                    exploit_image_label.config(image=new_exploit_image)
                     # Keep a reference to prevent garbage collection
                     vuln_image_label.image = new_vuln_image
+                    exploit_image_label.image = new_exploit_image
                 except Exception as e:
                     print(f"Error loading new vuln image: {e}")
 
@@ -408,8 +431,11 @@ def process_output_queue():
                     high_count = counts.get('high_count', 0)
                     medium_count = counts.get('medium_count', 0)
                     low_count = counts.get('low_count', 0)
+                    exploitedcves = counts.get('exploitedcves', 0)
+                    incompatiblecves = counts.get('incompatiblecves', 0)
+                    tot_cve = int(exploitedcves) + int(incompatiblecves)
 
-                    # Content to print once scan completes
+                    # Update the vuln_content variable
                     vuln_content = f"""
     [+] Hosts scanned: {hosts_count}
     [+] Applications scanned: {os_count}
@@ -421,9 +447,22 @@ def process_output_queue():
     """
                     # Update the label
                     vuln_scan_results_label.config(text=vuln_content)
+
+                    # Update the exploit_content variable
+                    exploit_content = f"""
+    [+] Number of exploited CVEs: {exploitedcves}
+    [+] Number of CVEs without exploits: {incompatiblecves}
+    [+] Total CVEs examined: {tot_cve}
+    
+    
+    
+    
+    """
+                    # Update the label
+                    exploit_results_text.config(text=exploit_content)
+
                 except Exception as e:
                     print(f"Error reading counts.json: {e}")
-
             else:
                 insert_output(line)
     except queue.Empty:
@@ -431,6 +470,7 @@ def process_output_queue():
     finally:
         # Schedule the next check
         window.after(50, process_output_queue)
+
 
 
 def stop_scan():
@@ -854,6 +894,8 @@ def save_to_config():
 
     # Show success popup
     save_dark_popup()
+
+    show_frame(dashboard_frame)
 
 
 def clear_entries():
@@ -3862,7 +3904,12 @@ vuln_image_label.place(x=350, y=550)
 
 # Exploit graph placeholder
 exploit_graph_placeholder = PhotoImage(file=relative_to_assets("exploit_graph_placeholder.png", 1))
-exploit_image_label = Label(dashboard_frame, image=exploit_graph_placeholder, borderwidth=0, bg="#313237", highlightthickness=0)
+exploit_image_label = Label(
+    dashboard_frame,
+    image=exploit_graph_placeholder,
+    borderwidth=0,
+    bg="#313237",
+    highlightthickness=0)
 exploit_image_label.place(x=660, y=550)
 
 # Define the text to display in the two Text widgets

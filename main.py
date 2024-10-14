@@ -1,9 +1,7 @@
 import os
 import sys
 import json
-import subprocess
 import time
-import csv
 import argparse
 import configparser
 from termcolor import colored
@@ -14,7 +12,6 @@ from report_utils import generate_report
 from config_utils import update_config_file
 from nikto_utils import run_nikto_scans
 from exploit_module import *
-
 
 
 def main():
@@ -44,6 +41,9 @@ def main():
         --target_ip (str): IP address of the target to be scanned or file containing one IP address per line.
         --task_name (str): Name of the task to be created and executed.
     """
+    # Start timing the execution
+    start_time = time.time()
+
     # Parse command-line arguments
     parser = argparse.ArgumentParser(
         description="Update config.ini settings.",
@@ -99,6 +99,7 @@ def main():
     os.makedirs("custom_reports", exist_ok=True)
     os.makedirs("nuclei_results", exist_ok=True)
     os.makedirs("nikto_results", exist_ok=True)
+    os.makedirs("metasploit_results", exist_ok=True)
     os.makedirs("result_graphs", exist_ok=True)
 
     # Update the configuration file with provided arguments
@@ -168,6 +169,13 @@ def main():
         scanner,
     )
 
+    # Run the Exploitation Module with the obtained csv_path
+    if csv_path:
+        exploitedcves, incompatiblecves, reportname = run_exploit_module(
+            csv_path)  # Capture counts and report path
+    else:
+        exploitedcves, incompatiblecves, reportname = 0, 0, None  # Default values if csv_path is not available
+
     # Generate the report using the generated CSV report path and Nikto CSV path
     if csv_path:
         generate_report(
@@ -179,6 +187,9 @@ def main():
             low_count,
             os_count,
             apps_count,
+            reportname=reportname,
+            exploitedcves=exploitedcves,
+            incompatiblecves=incompatiblecves,
             nikto_csv_path=nikto_combined_output_file,
             nuclei_combined_output_file=nuclei_combined_output_file,
         )
@@ -192,27 +203,18 @@ def main():
         "os_count": os_count,
         "high_count": high_count,
         "medium_count": medium_count,
-        "low_count": low_count
+        "low_count": low_count,
+        "exploitedcves": exploitedcves,
+        "incompatiblecves": incompatiblecves
     }
 
     with open('counts.json', 'w') as f:
         json.dump(counts, f)
-    
-    # Exploitation Module & Globally Defined Variables
-    connectest = False
-    connectfail = "Connection to the Metasploit RPC server has failed. Attempting again in 10 seconds."
-    exploitedcves = 0
-    incompatiblecves = 0
-    noexploitcve = 0
-    nxcvelist = ['0']
-    rowcounter = 0
-    
-    reportcreation()
-    subprocess.run(["msfrpcd -P kali"], shell = True)
-    rpcconnect(connectest, connectfail)
-    openvasread(rowcounter)
-    reportfinalise(incompatiblecve)
 
+    # Calculate and print the duration of the script execution
+    end_time = time.time()
+    duration = end_time - start_time
+    print(f"\nScan Duration: {duration:.2f} seconds")
 
 if __name__ == "__main__":
     main()

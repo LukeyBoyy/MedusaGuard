@@ -1,6 +1,8 @@
 import os
 import io
 import time
+import re
+import json
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
@@ -79,6 +81,116 @@ def add_later_page_number(canvas, doc):
     canvas.setFont("Helvetica", 10)
     canvas.drawRightString(200 * mm, 15 * mm, text)
 
+def parse_metasploit_report(report_path):
+    """
+    Parse the Metasploit TXT report and extract exploitation data.
+
+    Args:
+        report_path (str): Path to the Metasploit TXT report.
+
+    Returns:
+        dict: A dictionary containing exploited CVEs, exploit details, payload statistics, and CVEs without exploits.
+    """
+    exploited_cves = []
+    cves_without_exploits = []
+    total_cves_examined = 0
+    total_exploited = 0
+    incompatible_cves = 0
+
+    # Regular expressions to match relevant lines
+    cve_found_re = re.compile(r"\[(.*?)\] Exploitable CVE Found: (CVE-\d{4}-\d+)")
+    exploit_identified_re = re.compile(r"\[(.*?)\] Identified Exploit: (.+)")
+    target_ip_re = re.compile(r"Target IP: (\d+\.\d+\.\d+\.\d+)")
+    target_port_re = re.compile(r"Target Port: (\d+)")
+    payload_stats_re = re.compile(r"Payload Statistics:")
+    summary_re = re.compile(r"Total CVEs examined: (\d+)\s+Total exploited CVEs: (\d+)\s+Incompatible CVEs: (\d+)")
+
+    current_exploit = {}
+    payload_total = payload_successful = payload_failed = None
+    capturing_payload_stats = False
+
+    with open(report_path, 'r') as file:
+        for line in file:
+            line = line.strip()
+
+            # Check for Exploitable CVE Found
+            cve_found_match = cve_found_re.search(line)
+            if cve_found_match:
+                current_exploit['cve'] = cve_found_match.group(2)
+                continue
+
+            # Check for Identified Exploit
+            exploit_identified_match = exploit_identified_re.search(line)
+            if exploit_identified_match:
+                current_exploit['exploit'] = exploit_identified_match.group(2)
+                continue
+
+            # Check for Target IP
+            target_ip_match = target_ip_re.search(line)
+            if target_ip_match:
+                current_exploit['target_ip'] = target_ip_match.group(1)
+                continue
+
+            # Check for Target Port
+            target_port_match = target_port_re.search(line)
+            if target_port_match:
+                current_exploit['target_port'] = target_port_match.group(1)
+                continue
+
+            # Check for Payload Statistics
+            if payload_stats_re.search(line):
+                capturing_payload_stats = True
+                continue
+
+            if capturing_payload_stats:
+                if line.startswith("Total:"):
+                    payload_total = int(line.split("Total:")[1].strip())
+                elif line.startswith("Successful:"):
+                    payload_successful = int(line.split("Successful:")[1].strip())
+                elif line.startswith("Failed:"):
+                    payload_failed = int(line.split("Failed:")[1].strip())
+                    # After capturing all payload stats, append the exploit
+                    if current_exploit:
+                        current_exploit['payload_total'] = payload_total
+                        current_exploit['payload_successful'] = payload_successful
+                        current_exploit['payload_failed'] = payload_failed
+                        exploited_cves.append(current_exploit.copy())
+                        total_exploited += 1
+                        current_exploit = {}
+                        # Reset payload stats
+                        payload_total = payload_successful = payload_failed = None
+                        capturing_payload_stats = False
+                continue
+
+            # Check for Summary
+            summary_match = summary_re.search(line)
+            if summary_match:
+                total_cves_examined = int(summary_match.group(1))
+                total_exploited = int(summary_match.group(2))
+                incompatible_cves = int(summary_match.group(3))
+                continue
+
+            # Detect the section listing CVEs without exploits
+            if "The following CVEs were detected, but Metasploit does not have an exploit to target these:" in line:
+                # Read subsequent lines for CVEs
+                for cve_line in file:
+                    cve_line = cve_line.strip()
+                    if not cve_line:
+                        break
+                    if cve_line.startswith("CVE-"):
+                        cves_without_exploits.append(cve_line)
+
+    parsed_data = {
+        "exploited_cves": exploited_cves,
+        "cves_without_exploits": cves_without_exploits,
+        "total_cves_examined": total_cves_examined,
+        "total_exploited_cves": total_exploited,
+        "incompatible_cves": incompatible_cves
+    }
+
+    return parsed_data
+
+
 def generate_report(
     csv_path,
     task_name,
@@ -88,6 +200,9 @@ def generate_report(
     low_count,
     os_count,
     apps_count,
+    reportname,
+    exploitedcves,
+    incompatiblecves,
     nikto_csv_path=None,
     nuclei_combined_output_file=None,
 ):
@@ -110,6 +225,9 @@ def generate_report(
         low_count (int): Number of low-severity vulnerabilities found.
         os_count (int): Number of operating systems scanned.
         apps_count (int): Number of applications scanned.
+        reportname (str): Name of the metasploit report.
+        exploitedcves (int): Number of exploited CVEs.
+        incompatiblecves (int): Number of incompatible CVEs.
         nikto_csv_path (str, optional): Path to the Nikto scan results CSV file. Defaults to None.
         nuclei_combined_output_file (str, optional): Path to the combined nuclei scan results. Defaults to None.
     """
@@ -130,21 +248,29 @@ def generate_report(
         result_graphs_dir, f"{task_name}_piechart_{completion_time}.png"
     )
     pie_chart_path = pie_out
-    bar_out = os.path.join(
-        result_graphs_dir, f"{task_name}_barchart_{completion_time}.png"
+    exploit_pie_out = os.path.join(
+        result_graphs_dir, f"{task_name}_exploitpiechart_{completion_time}.png"
     )
-    bar_chart_path = bar_out
+    exploit_pie_chart_path = exploit_pie_out
+    #bar_out = os.path.join(
+    #    result_graphs_dir, f"{task_name}_barchart_{completion_time}.png"
+    #)
+    #bar_chart_path = bar_out
     gui_pie_out = os.path.join(
         result_graphs_dir, f"vuln_pie.png"
     )
     gui_pie_out = gui_pie_out
+    gui_exploit_pie_out = os.path.join(
+        result_graphs_dir, f"exploit_pie.png"
+    )
+    gui_exploit_pie_out = gui_exploit_pie_out
 
     # Load and process CSV data from OpenVAS scan results
     df = pd.read_csv(rep_csv_path)
     df = df.astype(str).fillna("Value not found")
     df["CVSS"] = pd.to_numeric(df["CVSS"], errors="coerce")
 
-    # Summarise vulnerability counts
+    # Summarise counts
     total_vulns = high_count + medium_count + low_count
     high_vulns = high_count
     medium_vulns = medium_count
@@ -161,10 +287,16 @@ def generate_report(
     colors_list = ["#d43f3a", "#fdc432", "#3eae49"]  # Red, Orange, Green
     sizes = [high_vulns, medium_vulns, low_vulns]
 
+    # Prepare data for the pie chart (exploit results)
+    exploit_labels = ["Successful", "Unsuccessful"]
+    exploit_color_list = ["#009688", "#FF6F61"]
+    exploit_sizes = [exploitedcves, incompatiblecves]
+
+
     # Prepare data for the bar chart (scan information)
-    bar_legend_labels = ["Systems", "Applications", "Operating Systems"]
-    bar_sizes = [hosts_count, os_count, apps_count]
-    bar_colors = ["#bbeeff", "#3366ff", "#77aaff"]  # Shades of blue
+    #bar_legend_labels = ["Systems", "Applications", "Operating Systems"]
+    #bar_sizes = [hosts_count, os_count, apps_count]
+    #bar_colors = ["#bbeeff", "#3366ff", "#77aaff"]  # Shades of blue
 
     # Load and process Nikto CSV data if provided
     if nikto_csv_path and os.path.exists(nikto_csv_path):
@@ -236,55 +368,90 @@ def generate_report(
     except Exception as e:
         print(colored(f"[ERROR] Failed to generate pie graph: {e}", "red"))
 
+    # Generate the pie chart for exploits
     try:
-        # Generate the bar chart for scan information
-        fig2, ax2 = plt.subplots(figsize=(3.5, 3.5))  # Smaller size
-        bars = ax2.bar(bar_legend_labels, bar_sizes, color=bar_colors, edgecolor="none")
-
-        # Add value labels on top of each bar
-        for bar in bars:
-            yval = bar.get_height()
-            ax2.text(
-                bar.get_x() + bar.get_width() / 2,
-                yval + 0.5,
-                f"{int(yval)}",
-                ha="center",
-                va="bottom",
-                fontsize=10,
-                color="black",
-            )
-
-        # Set labels and formatting
-        ax2.set_ylabel("Count", fontsize=10)
-        ax2.set_title("Scan Information", fontsize=12, fontweight="bold", pad=15)
-        ax2.tick_params(axis="x", labelsize=10)
-        ax2.tick_params(axis="y", labelsize=10)
-        ax2.spines["top"].set_visible(False)
-        ax2.spines["right"].set_visible(False)
-        ax2.spines["left"].set_linewidth(1.5)
-        ax2.spines["bottom"].set_linewidth(1.5)
-        # Removes x-axis label.
-        ax2.set_xticklabels([])
-        ax2.yaxis.grid(False)
-        ax2.xaxis.grid(False)
-        ax2.set_axisbelow(True)
-
-        ax2.legend(
-            bars,
-            bar_legend_labels,
-            title="Categories",
-            loc="upper left",
-            fontsize=8,
-            title_fontsize=10,
+        fig1, ax1 = plt.subplots(figsize=(3.5, 3.5))
+        wedges, texts = ax1.pie(
+            exploit_sizes,
+            labels=exploit_labels,
+            colors=exploit_color_list,
+            startangle=90,
+            wedgeprops=dict(width=0.6, edgecolor="white"),
+            textprops=dict(color="black", fontsize=10),
         )
 
-        plt.tight_layout()
+        # Add a center circle to make it a donut chart
+        center_circle = plt.Circle((0, 0), 0.60, fc="white")
+        fig1.gca().add_artist(center_circle)
 
-        # Save the bar chart
-        plt.savefig(bar_chart_path, bbox_inches="tight", dpi=300)
-        plt.close(fig2)  # Close the figure to free memory
+        # Set the title and legend
+        ax1.set_title("Exploits", fontsize=12, fontweight="bold", pad=15)
+        ax1.legend(
+            wedges,
+            exploit_labels,
+            title="Exploit Status",
+            loc="center left",
+            bbox_to_anchor=(1, 0, 0.5, 1),
+            fontsize=10,
+        )
+
+        plt.axis("equal")  # Equal aspect ratio ensures that pie is drawn as a circle
+
+        # Save the pie chart image
+        plt.savefig(exploit_pie_out, bbox_inches="tight", dpi=300)
+        plt.close(fig1)  # Close the figure to free memory
     except Exception as e:
-        print(colored(f"[ERROR] Failed to generate bar chart: {e}", "red"))
+        print(colored(f"[ERROR] Failed to generate exploits pie chart: {e}", "red"))
+
+    #try:
+    #    # Generate the bar chart for scan information
+    #    fig2, ax2 = plt.subplots(figsize=(3.5, 3.5))  # Smaller size
+    #    bars = ax2.bar(bar_legend_labels, bar_sizes, color=bar_colors, edgecolor="none")
+#
+    #    # Add value labels on top of each bar
+    #    for bar in bars:
+    #        yval = bar.get_height()
+    #        ax2.text(
+    #            bar.get_x() + bar.get_width() / 2,
+    #            yval + 0.5,
+    #            f"{int(yval)}",
+    #            ha="center",
+    #            va="bottom",
+    #            fontsize=10,
+    #            color="black",
+    #        )
+#
+    #    # Set labels and formatting
+    #    ax2.set_ylabel("Count", fontsize=10)
+    #    ax2.set_title("Scan Information", fontsize=12, fontweight="bold", pad=15)
+    #    ax2.tick_params(axis="x", labelsize=10)
+    #    ax2.tick_params(axis="y", labelsize=10)
+    #    ax2.spines["top"].set_visible(False)
+    #    ax2.spines["right"].set_visible(False)
+    #    ax2.spines["left"].set_linewidth(1.5)
+    #    ax2.spines["bottom"].set_linewidth(1.5)
+    #    # Removes x-axis label.
+    #    ax2.set_xticklabels([])
+    #    ax2.yaxis.grid(False)
+    #    ax2.xaxis.grid(False)
+    #    ax2.set_axisbelow(True)
+#
+    #    ax2.legend(
+    #        bars,
+    #        bar_legend_labels,
+    #        title="Categories",
+    #        loc="upper left",
+    #        fontsize=8,
+    #        title_fontsize=10,
+    #    )
+#
+    #    plt.tight_layout()
+#
+    #    # Save the bar chart
+    #    plt.savefig(bar_chart_path, bbox_inches="tight", dpi=300)
+    #    plt.close(fig2)  # Close the figure to free memory
+    #except Exception as e:
+    #    print(colored(f"[ERROR] Failed to generate bar chart: {e}", "red"))
 
     # Generate the pie graph for the GUI result section
     try:
@@ -318,6 +485,30 @@ def generate_report(
         plt.close(fig_vuln_gui)  # Close the figure to free memory
     except Exception as e:
         print(colored(f"[ERROR] Failed to generate GUI vuln pie chart: {e}", "red"))
+
+    # Generate the pie graph for the GUI result section (exploits)
+    try:
+        explode = (0, 0)  # No slice explode
+        # Adjust the figure size to provide more room for the legend
+        fig_exp_gui, ax = plt.subplots(figsize=(3.12, 1.96))
+        # Create the pie chart
+        ax.pie(exploit_sizes, labels=None, colors=exploit_color_list,
+               autopct=lambda p: f'{round(p * sum(exploit_sizes) / 100)}',
+               startangle=90, explode=explode, textprops={'fontsize': 8})
+        fig_exp_gui.patch.set_alpha(0)  # Makes the background transparent
+        # Create custom legend with circle markers and no lines
+        legend_elements = [Line2D([0], [0], marker='o', color='w', label=label, markersize=7,
+                                  markerfacecolor=color, linestyle='None')
+                           for label, color in zip(exploit_labels, exploit_color_list)]
+        # Place the legend closer to the pie chart
+        legend = ax.legend(handles=legend_elements, loc='center left', bbox_to_anchor=(0.85, 0.5), frameon=False,
+                           fontsize=8)
+        for text in legend.get_texts():
+            text.set_color("white")
+        plt.savefig(gui_exploit_pie_out, bbox_inches="tight")
+        plt.close(fig_exp_gui)  # Close the figure to free memory
+    except Exception as e:
+        print(colored(f"[ERROR] Failed to generate GUI exploit pie chart: {e}", "red"))
 
     try:
         # Initialize the PDF document
@@ -650,13 +841,13 @@ def generate_report(
             elements.append(table)
             elements.append(Spacer(1, 0.25 * inch))
 
-            if os.path.exists(pie_chart_path) and os.path.exists(bar_chart_path):
+            if os.path.exists(pie_chart_path) and os.path.exists(exploit_pie_chart_path):
                 # Add the pie chart and bar chart side by side
                 chart_table = Table(
                     [
                         [
                             Image(pie_chart_path, width=2.50 * inch, height=2 * inch),
-                            Image(bar_chart_path, width=2.50 * inch, height=2 * inch),
+                            Image(exploit_pie_chart_path, width=2.50 * inch, height=2 * inch),
                         ]
                     ],
                     colWidths=[2.875 * inch, 2.875 * inch],
@@ -909,6 +1100,7 @@ def generate_report(
         definitions_table.setStyle(definitions_table_style)
         elements.append(definitions_table)
         elements.append(Spacer(1, 0.75 * inch))
+        elements.append(PageBreak())
 
         # Appendix: Recommended Actions
         elements.append(
@@ -1009,6 +1201,7 @@ def generate_report(
         actions_table.setStyle(actions_table_style)
         elements.append(actions_table)
         elements.append(Spacer(1, 0.75 * inch))  # Increased spacing
+        elements.append(PageBreak())
 
         # Appendix: Detailed Vulnerability List
         # Extract relevant columns for the detailed vulnerability list
@@ -1104,6 +1297,7 @@ def generate_report(
             detailed_vulns_table.setStyle(detailed_vulns_table_style)
             elements.append(detailed_vulns_table)
             elements.append(Spacer(1, 0.75 * inch))  # Increased spacing
+            elements.append(PageBreak())
         else:
             elements.append(Paragraph("No Detailed Vulnerability List was provided.", styleN))
             elements.append(Spacer(1, 0.75 * inch))
@@ -1163,6 +1357,7 @@ def generate_report(
 
             nikto_table.setStyle(nikto_table_style)
             elements.append(nikto_table)
+            elements.append(PageBreak())
         else:
             elements.append(Paragraph("No Nikto scan results were provided.", styleN))
 
@@ -1232,6 +1427,184 @@ def generate_report(
         else:
             elements.append(Paragraph("No Nuclei scan results were provided.", styleN))
 
+        # Define path for the Metasploit report
+        metasploit_report_path = os.path.join("metasploit_results",
+                                              reportname) if reportname is None else os.path.join(
+            "metasploit_results", reportname)
+
+        # Parse the Metasploit report
+        if os.path.exists(metasploit_report_path):
+            metasploit_data = parse_metasploit_report(metasploit_report_path)
+        else:
+            metasploit_data = None
+            print(colored(f"[WARNING] Metasploit report not found at path: {metasploit_report_path}", "yellow"))
+
+        # Appendix: Metasploit Exploitation Results
+        if metasploit_data:
+            elements.append(PageBreak())
+            elements.append(Paragraph("Appendix: Metasploit Exploitation Results", styleH))
+            metasploit_intro = (
+                "The following sections detail the results of the Metasploit exploitation attempts conducted during the assessment."
+            )
+            elements.append(Paragraph(metasploit_intro, styleN))
+            elements.append(Spacer(1, 0.25 * inch))
+
+            # Table: Exploited CVEs
+            exploited_cves = metasploit_data.get("exploited_cves", [])
+            if exploited_cves:
+                elements.append(Paragraph("Exploited CVEs:", styleH))
+                metasploit_exp_cve = (
+                    """The table below enumerates the specific CVEs that were successfully exploited during the assessment. 
+                    Each entry provides detailed information about the vulnerability, the exploit utilized, the target IP and port, 
+                    and the number of payloads that were successfully deployed. This data underscores the effectiveness of the 
+                    exploitation efforts and highlights the critical vulnerabilities that require immediate attention."""
+                )
+
+                elements.append(Paragraph(metasploit_exp_cve, styleN))
+                elements.append(Spacer(1, 0.25 * inch))
+                exploited_data = [["CVE", "Exploit", "Target IP", "Target Port", "Payload Successful",]]
+                for exploit in exploited_cves:
+                    exploited_data.append([
+                        Paragraph(exploit.get("cve", "N/A"), styleN),
+                        Paragraph(exploit.get("exploit", "N/A"), styleN),
+                        Paragraph(exploit.get("target_ip", "N/A"), styleN),
+                        Paragraph(exploit.get("target_port", "N/A"), styleN),
+                        Paragraph(str(exploit.get("payload_successful", "N/A")), styleN),
+                    ])
+
+                exploited_table = Table(
+                    exploited_data,
+                    colWidths=[1.2 * inch, 2.1 * inch, 1.2 * inch, 1 * inch, 1.2 * inch]
+                )
+
+                exploited_table_style = TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2C3E50")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 8),
+                        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+                        ("TOPPADDING", (0, 0), (-1, 0), 8),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                        ("BOX", (0, 0), (-1, -1), 0.75, colors.black),
+                    ]
+                )
+
+                # Alternate row colors
+                for i in range(1, len(exploited_data)):
+                    bg_color = colors.HexColor("#EAECEE") if i % 2 == 0 else colors.HexColor("#F2F3F4")
+                    exploited_table_style.add("BACKGROUND", (0, i), (-1, i), bg_color)
+
+                exploited_table.setStyle(exploited_table_style)
+                elements.append(exploited_table)
+                elements.append(Spacer(1, 0.25 * inch))
+            else:
+                elements.append(Paragraph("No CVEs were exploited.", styleN))
+                elements.append(Spacer(1, 0.25 * inch))
+
+            # Table: CVEs Without Available Exploits
+            cves_without_exploits = metasploit_data.get("cves_without_exploits", [])
+            if cves_without_exploits:
+                elements.append(Paragraph("CVEs Detected Without Available Exploits:", styleH))
+                metasploit_no_exploit = (
+                    """This section provides a list of CVEs for which have no corresponding Metasploit exploit"""
+                )
+                elements.append(Paragraph(metasploit_no_exploit, styleN))
+                elements.append(Spacer(1, 0.25 * inch))
+                cves_without_exploits_data = [["CVE"]]
+                for cve in cves_without_exploits:
+                    cves_without_exploits_data.append([Paragraph(cve, styleN)])
+
+                cves_without_table = Table(
+                    cves_without_exploits_data,
+                    colWidths=[6.75 * inch]
+                )
+
+                cves_without_table_style = TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2C3E50")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 8),
+                        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+                        ("TOPPADDING", (0, 0), (-1, 0), 8),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                        ("BOX", (0, 0), (-1, -1), 0.75, colors.black),
+                    ]
+                )
+
+                # Alternate row colors
+                for i in range(1, len(cves_without_exploits_data)):
+                    bg_color = colors.HexColor("#EAECEE") if i % 2 == 0 else colors.HexColor("#F2F3F4")
+                    cves_without_table_style.add("BACKGROUND", (0, i), (-1, i), bg_color)
+
+                cves_without_table.setStyle(cves_without_table_style)
+                elements.append(cves_without_table)
+                elements.append(Spacer(1, 0.25 * inch))
+            else:
+                elements.append(Paragraph("All detected CVEs have available exploits.", styleN))
+                elements.append(Spacer(1, 0.25 * inch))
+
+            # Summary Statistics
+            if metasploit_data:
+                with open('counts.json', 'r') as f:
+                    counts = json.load(f)
+                exploited_cves = counts.get('exploitedcves', 0)
+                incompatible_cves = counts.get('incompatiblecves', 0)
+                totcve = int(exploited_cves) + int(incompatible_cves)
+
+                elements.append(Paragraph("Summary Statistics:", styleH))
+                metasploit_summary = (
+                    """This table provides a comprehensive statistical overview of the exploitation module's 
+                    performance. The 'Total CVEs Examined' column shows the number of CVEs that were processed by the 
+                    exploit module. 'Total Exploited CVEs' represents the number of CVEs that were successfully 
+                    exploited, while 'Incompatible CVEs' indicates the number of CVEs for which no corresponding 
+                    Metasploit exploit is available."""
+                )
+                elements.append(Paragraph(metasploit_summary, styleN))
+                elements.append(Spacer(1, 0.25 * inch))
+                summary_data = [
+                    ["Total CVEs Examined", "Total Exploited CVEs", "Incompatible CVEs"],
+                    [
+                        Paragraph(str(totcve), styleN),
+                        Paragraph(str(exploited_cves), styleN),
+                        Paragraph(str(incompatible_cves), styleN),
+                    ]
+                ]
+
+                summary_table = Table(
+                    summary_data,
+                    colWidths=[2.2 * inch, 2.3 * inch, 2.2 * inch]
+                )
+
+                summary_table_style = TableStyle(
+                    [
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2C3E50")),
+                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+                        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                        ("FONTSIZE", (0, 0), (-1, -1), 8),
+                        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+                        ("TOPPADDING", (0, 0), (-1, 0), 8),
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                        ("BOX", (0, 0), (-1, -1), 0.75, colors.black),
+                    ]
+                )
+
+                # Alternate row colors
+                for i in range(1, len(summary_data)):
+                    bg_color = colors.HexColor("#EAECEE") if i % 2 == 0 else colors.HexColor("#F2F3F4")
+                    summary_table_style.add("BACKGROUND", (0, i), (-1, i), bg_color)
+
+                summary_table.setStyle(summary_table_style)
+                elements.append(summary_table)
+                elements.append(Spacer(1, 0.5 * inch))
+            else:
+                elements.append(Paragraph("Summary Statistics are not available.", styleN))
+                elements.append(Spacer(1, 0.5 * inch))
+
         # Build PDF and add page numbers to each page
         doc.build(elements, onFirstPage=add_first_page_header, onLaterPages=add_later_page_number)
 
@@ -1240,10 +1613,10 @@ def generate_report(
             + f" Executive report generated and saved to "
             + colored(f"{output_pdf_path}", attrs=["bold"])
         )
+
         print(
             colored("[SUCCESS]", "green")
             + " All scans completed. Reports generated successfully"
         )
-
     except Exception as e:
         print(colored(f"[ERROR] Failed to generate executive PDF report: {e}", "red"))
