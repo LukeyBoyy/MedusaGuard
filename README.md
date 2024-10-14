@@ -29,7 +29,7 @@ An all-in-one tool that integrates **Nikto**, **Greenbone OpenVAS**, **Nuclei**,
    - [Advanced Exploitation Automation](#advanced-exploitation-automation)
    - [Interactive Dashboard for Reports](#interactive-dashboard-for-reports)
 4. [How to Install Medusa Guard](#how-to-install-medusa-guard)
-5. [Quick Start Guide for Medusa Guard](#quick-start-guide-for-medusa-guard)
+5. [Getting Started Guide for Medusa Guard](#getting-startd-guide-for-medusa-guard)
 6. [License](#license)
 7. [Credits](#credits)
 
@@ -87,7 +87,7 @@ pip install -r requirements.txt
 
 ---
 
-## **Quick Start Guide for Medusa Guard**
+## ** Getting Started Guide for Medusa Guard**
 [MedusaGuard - Getting Started Guide.pdf](https://github.com/user-attachments/files/17359582/MedusaGuard.-.Getting.Started.Guide.pdf)
 
 ---
