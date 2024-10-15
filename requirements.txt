@@ -1,0 +1,9 @@
+matplotlib==3.6.3
+pandas==2.1.4+dfsg
+Pillow==10.4.0
+pymetasploit3==1.0.6
+pytz==2024.1
+reportlab==4.2.2
+schedule==1.2.2
+termcolor==2.5.0
+tkcalendar==1.6.1
