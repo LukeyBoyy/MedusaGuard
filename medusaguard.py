@@ -297,20 +297,12 @@ def save_dark_popup():
 # -------------------------------------------
 # Scan Functions
 # -------------------------------------------
-
-def insert_output(text_widget, line):
-    """
-    Inserts a line of text into a Text widget and scrolls to the end.
-
-    Args:
-        text_widget (tkinter.Text): The Text widget to insert text into.
-        line (str): The line of text to insert.
-    """
-    text_widget.config(state="normal")
-    text_widget.insert("end", line)
-    text_widget.see("end")
-    text_widget.config(state="disabled")
-
+# Function to insert text into the Text widget
+def insert_output(line):
+    dashboard_output_text.config(state='normal')
+    dashboard_output_text.insert('end', line, 'spacing')
+    dashboard_output_text.see('end')
+    dashboard_output_text.config(state='disabled')
 
 def start_scan():
     """
@@ -936,10 +928,49 @@ logo_image = PhotoImage(file=BASE_PATH / "assets" / "logo.png")  # Load the logo
 window.iconphoto(False, logo_image)  # Set the window icon
 window.protocol("WM_DELETE_WINDOW", on_closing)  # Bind the close event
 
+# Create the splash screen window
+splash = Toplevel()
+splash.overrideredirect(True)
+splash.geometry("550x450")
+splash.configure(bg="#121212")
+
+# Center the splash screen
+screen_width = splash.winfo_screenwidth()
+screen_height = splash.winfo_screenheight()
+x = int((screen_width / 2) - (400 / 2))
+y = int((screen_height / 2) - (300 / 2))
+splash.geometry(f"+{x}+{y}")
+
+# Add content to the splash screen
+logo_image_splash = PhotoImage(file=BASE_PATH / "assets" / "splash_image.png")
+logo_label = Label(splash, image=logo_image_splash, bg="#121212")
+logo_label.pack(expand=True)
+
+# Keep a reference to prevent garbage collection
+splash.logo_image_splash = logo_image_splash
+
+# Function to destroy splash screen and show main window
+def show_main_window():
+    splash.destroy()
+    # Center the main window
+    window.update_idletasks()
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+    window_width = 1000
+    window_height = 885
+    x = (screen_width // 2) - (window_width // 2)
+    y = (screen_height // 2) - (window_height // 2)
+    window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+    window.deiconify()  # Show the main window
+
+# Schedule splash screen to close after 3 seconds
+window.after(6000, show_main_window)
+
 # Create frames for different pages
 edit_config_frame = Frame(window, bg="#121212")  # Edit configuration frame
 dashboard_frame = Frame(window, bg="#121212")  # Dashboard/Main frame
 schedule_frame = Frame(window, bg="#121212")  # Scan scheduler frame
+
 # Place all frames in the same location; only the raised frame will be visible
 for frame in (edit_config_frame, dashboard_frame, schedule_frame):
     frame.place(relwidth=1, relheight=1)
@@ -3289,14 +3320,14 @@ dashboard_output_text.configure(yscrollcommand=output_scrollbar.set)
 dashboard_output_text.tag_configure('spacing', spacing2=5)
 
 # Function to insert text into the Text widget
-def insert_output(line):
+def insert_initial(line):
     dashboard_output_text.config(state='normal')
     dashboard_output_text.insert('end', line, 'spacing')
     dashboard_output_text.see('end')
     dashboard_output_text.config(state='disabled')
 
 # Example usage: Insert some text
-insert_output(
+insert_initial(
 """This window will populate with logs once you start a scan.
 """
 )
@@ -3978,6 +4009,5 @@ dashboard_button_18.bind('<Enter>', dashboard_button_18_hover)
 dashboard_button_18.bind('<Leave>', dashboard_button_18_leave)
 
 window.resizable(False, False)  # Prevent the window from being resized
-window.deiconify()  # Show the window after all widgets have been loaded
 window.after(100, process_output_queue)  # Start processing the output queue
 window.mainloop()  # Start the Tkinter event loop
