@@ -76,7 +76,7 @@ A **GUI-based dashboard** offers real-time insights into identified vulnerabilit
 
 ```bash
 # Clone the repository
-git clone https://github.com/YourUsername/MedusaGuard.git
+git clone https://github.com/LukeyBoyy/MedusaGuard.git
 
 # Navigate to the directory
 cd MedusaGuard
