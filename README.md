@@ -82,7 +82,7 @@ git clone https://github.com/LukeyBoyy/MedusaGuard.git
 cd MedusaGuard
 
 # Install necessary dependencies
-pip install -r requirements.txt
+sudo pip install -r requirements.txt
 ```
 
 ---
