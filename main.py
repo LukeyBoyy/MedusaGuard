@@ -213,7 +213,13 @@ def main():
     # Calculate and print the duration of the script execution
     end_time = time.time()
     duration = end_time - start_time
-    print(f"\nScan Duration: {duration:.2f} seconds")
+
+    # Calculate hours, minutes, and seconds from the duration
+    hours = int(duration // 3600)
+    minutes = int((duration % 3600) // 60)
+    seconds = int(duration % 60)
+
+    print(f"\nScan Duration: {hours:02d}:{minutes:02d}:{seconds:02d}")
 
 if __name__ == "__main__":
     main()
