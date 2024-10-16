@@ -2,6 +2,7 @@ from pathlib import Path
 import configparser
 import os
 import subprocess
+import webbrowser
 from datetime import datetime
 import threading
 import schedule
@@ -155,6 +156,14 @@ def on_closing():
         font=("Inter", 12)
     )
     no_button.pack(side="left", padx=20)
+
+def open_supplied_link():
+    """
+    Opens the default browser to the desired link.
+    """
+    supplied_link = "https://github.com/LukeyBoyy/MedusaGuard"
+    webbrowser.open(supplied_link)
+
 
 # Helper functions
 def relative_to_assets(path: str, frame_number: int = 0) -> Path:
@@ -1319,7 +1328,7 @@ button_8 = Button(
     image=button_image_8,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_8 clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 button_8.place(
@@ -1356,7 +1365,7 @@ button_9 = Button(
     image=button_image_9,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_9 clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 button_9.place(
@@ -1410,7 +1419,7 @@ button_10 = Button(
     image=button_image_10,
     borderwidth=0,
     highlightthickness=0,
-    # command=lambda: print("button_10 clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 button_10.place(
@@ -1682,7 +1691,6 @@ button_18 = Button(
     image=button_image_18,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_18 clicked"),
     relief="flat"
 )
 button_18.place(
@@ -1736,7 +1744,6 @@ button_20 = Button(
     image=button_image_20,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_20 clicked"),
     relief="flat"
 )
 button_20.place(
@@ -1790,7 +1797,6 @@ button_22 = Button(
     image=button_image_22,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_22 clicked"),
     relief="flat"
 )
 button_22.place(
@@ -1832,7 +1838,6 @@ button_24 = Button(
     image=button_image_24,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_24 clicked"),
     relief="flat"
 )
 button_24.place(
@@ -1870,7 +1875,6 @@ button_25 = Button(
     image=button_image_25,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_25 clicked"),
     relief="flat"
 )
 button_25.place(
@@ -1908,7 +1912,6 @@ button_26 = Button(
     image=button_image_26,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_26 clicked"),
     relief="flat"
 )
 button_26.place(
@@ -1977,7 +1980,6 @@ button_28 = Button(
     image=button_image_28,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_28 clicked"),
     relief="flat"
 )
 button_28.place(
@@ -2353,7 +2355,7 @@ edit_conf_button_9 = Button(
     image=edit_conf_button_image_9,
     borderwidth=0,
     highlightthickness=0,
-    #    command=lambda: show_frame(page2_frame),  # Navigate to page2_frame
+    command=open_supplied_link,
     relief="flat"
 )
 edit_conf_button_9.place(
@@ -2389,7 +2391,7 @@ edit_conf_button_10 = Button(
     image=edit_conf_button_image_10,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_10 clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 edit_conf_button_10.place(
@@ -2446,7 +2448,7 @@ edit_conf_button_11 = Button(
     image=edit_conf_button_image_11,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_11 clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 edit_conf_button_11.place(
@@ -2468,7 +2470,6 @@ edit_conf_button_12 = Button(
     image=edit_conf_button_image_12,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_12 clicked"),
     relief="flat"
 )
 edit_conf_button_12.place(
@@ -2995,7 +2996,6 @@ edit_conf_button_27 = Button(
     image=edit_conf_button_image_27,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_27 clicked"),
     relief="flat"
 )
 edit_conf_button_27.place(
@@ -3019,7 +3019,6 @@ edit_conf_button_28 = Button(
     image=edit_conf_button_image_28,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_28 clicked"),
     relief="flat"
 )
 edit_conf_button_28.place(
@@ -3042,7 +3041,6 @@ edit_conf_button_29 = Button(
     image=edit_conf_button_image_29,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_29 clicked"),
     relief="flat"
 )
 edit_conf_button_29.place(
@@ -3084,7 +3082,6 @@ edit_conf_button_30 = Button(
     image=edit_conf_button_image_30,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_30 clicked"),
     relief="flat"
 )
 edit_conf_button_30.place(
@@ -3107,7 +3104,6 @@ edit_conf_button_31 = Button(
     image=edit_conf_button_image_31,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_31 clicked"),
     relief="flat"
 )
 edit_conf_button_31.place(
@@ -3131,7 +3127,6 @@ edit_conf_button_32 = Button(
     image=edit_conf_button_image_32,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_32 clicked"),
     relief="flat"
 )
 edit_conf_button_32.place(
@@ -3155,7 +3150,6 @@ edit_conf_button_33 = Button(
     image=edit_conf_button_image_33,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_33 clicked"),
     relief="flat"
 )
 edit_conf_button_33.place(
@@ -3178,7 +3172,6 @@ edit_conf_button_34 = Button(
     image=edit_conf_button_image_34,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_34 clicked"),
     relief="flat"
 )
 edit_conf_button_34.place(
@@ -3202,7 +3195,6 @@ edit_conf_button_35 = Button(
     image=edit_conf_button_image_35,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_35 clicked"),
     relief="flat"
 )
 edit_conf_button_35.place(
@@ -3265,7 +3257,6 @@ dashboard_button_1 = Button(
     image=dashboard_button_image_1,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("dashboard_button_1 clicked"),
     relief="flat"
 )
 dashboard_button_1.place(
@@ -3348,7 +3339,7 @@ dashboard_button_3 = Button(
     image=dashboard_button_image_3,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("dashboard_button_3 clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 dashboard_button_3.place(
@@ -3410,7 +3401,6 @@ dashboard_button_5 = Button(
     image=dashboard_button_image_5,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("dashboard_button_5 clicked"),
     relief="flat"
 )
 dashboard_button_5.place(
@@ -3463,7 +3453,7 @@ dashboard_button_6 = Button(
     image=dashboard_button_image_6,
     borderwidth=0,
     highlightthickness=0,
-    #command=lambda: print("documentation button clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 dashboard_button_6.place(
