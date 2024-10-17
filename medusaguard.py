@@ -2,6 +2,7 @@ from pathlib import Path
 import configparser
 import os
 import subprocess
+import webbrowser
 from datetime import datetime
 import threading
 import schedule
@@ -33,6 +34,19 @@ from tkinter import (
     OptionMenu,
 )
 
+"""
+MedusaGuard GUI Application
+
+This script implements the graphical user interface (GUI) for MedusaGuard, an automated vulnerability scanning
+and exploitation tool. The GUI provides functionalities for starting/stopping scans, scheduling scans,
+editing configurations, and viewing scan results.
+
+The application is structured using Tkinter frames to represent different pages:
+- Dashboard Frame: Main interface for initiating scans and viewing results.
+- Edit Configuration Frame: Interface for editing scanning configurations.
+- Schedule Frame: Interface for scheduling scans at specified times.
+
+"""
 
 # -------------------------------------------
 # Global Variables and Helper Functions
@@ -55,12 +69,16 @@ start_scan_log_image = None   # Placeholder for start scan image
 stop_scan_log_image = None    # Placeholder for stop scan image
 cycling_images = False        # Flag to indicate if images should cycle during scan
 current_image_index = 0       # Index for cycling images
-new_vuln_image = None         # Global variable to hold the new vuln pie graph image after a scan
+new_vuln_image = None         # Holds the new vulnerability pie chart image after a scan
+new_exploit_image = None      # Holds the new exploit pie chart image after a scan
 
 
 def on_closing():
     """
     Handles the window close event by displaying a custom confirmation dialog.
+
+    This function overrides the default window close behavior to prompt the user
+    with a confirmation dialog before exiting the application.
     """
 
     # Create a custom dialog
@@ -138,6 +156,14 @@ def on_closing():
         font=("Inter", 12)
     )
     no_button.pack(side="left", padx=20)
+
+def open_supplied_link():
+    """
+    Opens the default browser to the desired link.
+    """
+    supplied_link = "https://github.com/LukeyBoyy/MedusaGuard"
+    webbrowser.open(supplied_link)
+
 
 # Helper functions
 def relative_to_assets(path: str, frame_number: int = 0) -> Path:
@@ -280,20 +306,12 @@ def save_dark_popup():
 # -------------------------------------------
 # Scan Functions
 # -------------------------------------------
-
-def insert_output(text_widget, line):
-    """
-    Inserts a line of text into a Text widget and scrolls to the end.
-
-    Args:
-        text_widget (tkinter.Text): The Text widget to insert text into.
-        line (str): The line of text to insert.
-    """
-    text_widget.config(state="normal")
-    text_widget.insert("end", line)
-    text_widget.see("end")
-    text_widget.config(state="disabled")
-
+# Function to insert text into the Text widget
+def insert_output(line):
+    dashboard_output_text.config(state='normal')
+    dashboard_output_text.insert('end', line, 'spacing')
+    dashboard_output_text.see('end')
+    dashboard_output_text.config(state='disabled')
 
 def start_scan():
     """
@@ -372,9 +390,11 @@ def process_output_queue():
 
     Re-enables the Start Scan button when the scan is complete.
     """
-    global cycling_images  # Add cycling_images here
-    global new_vuln_image  # Declare new_vuln_image as global
+    global cycling_images     # Add cycling_images here
+    global new_vuln_image     # Declare new_vuln_image as global
     global vuln_image_label
+    global new_exploit_image  # Declare new_exploit_image as global
+    global exploit_image_label
     try:
         while True:
             line = output_queue.get_nowait()
@@ -391,10 +411,14 @@ def process_output_queue():
                 try:
                     # Load the new image
                     new_vuln_image = PhotoImage(file='result_graphs/vuln_pie.png')
+                    new_exploit_image = PhotoImage(file='result_graphs/exploit_pie.png')
                     # Update the vuln_image_label with the new image
                     vuln_image_label.config(image=new_vuln_image)
+                    # Update the exploit_image_label with the new image
+                    exploit_image_label.config(image=new_exploit_image)
                     # Keep a reference to prevent garbage collection
                     vuln_image_label.image = new_vuln_image
+                    exploit_image_label.image = new_exploit_image
                 except Exception as e:
                     print(f"Error loading new vuln image: {e}")
 
@@ -408,8 +432,11 @@ def process_output_queue():
                     high_count = counts.get('high_count', 0)
                     medium_count = counts.get('medium_count', 0)
                     low_count = counts.get('low_count', 0)
+                    exploitedcves = counts.get('exploitedcves', 0)
+                    incompatiblecves = counts.get('incompatiblecves', 0)
+                    tot_cve = int(exploitedcves) + int(incompatiblecves)
 
-                    # Content to print once scan completes
+                    # Update the vuln_content variable
                     vuln_content = f"""
     [+] Hosts scanned: {hosts_count}
     [+] Applications scanned: {os_count}
@@ -421,9 +448,22 @@ def process_output_queue():
     """
                     # Update the label
                     vuln_scan_results_label.config(text=vuln_content)
+
+                    # Update the exploit_content variable
+                    exploit_content = f"""
+    [+] Number of exploited CVEs: {exploitedcves}
+    [+] Number of CVEs without exploits: {incompatiblecves}
+    [+] Total CVEs examined: {tot_cve}
+    
+    
+    
+    
+    """
+                    # Update the label
+                    exploit_results_text.config(text=exploit_content)
+
                 except Exception as e:
                     print(f"Error reading counts.json: {e}")
-
             else:
                 insert_output(line)
     except queue.Empty:
@@ -431,6 +471,7 @@ def process_output_queue():
     finally:
         # Schedule the next check
         window.after(50, process_output_queue)
+
 
 
 def stop_scan():
@@ -855,6 +896,8 @@ def save_to_config():
     # Show success popup
     save_dark_popup()
 
+    show_frame(dashboard_frame)
+
 
 def clear_entries():
     """
@@ -894,10 +937,49 @@ logo_image = PhotoImage(file=BASE_PATH / "assets" / "logo.png")  # Load the logo
 window.iconphoto(False, logo_image)  # Set the window icon
 window.protocol("WM_DELETE_WINDOW", on_closing)  # Bind the close event
 
+# Create the splash screen window
+splash = Toplevel()
+splash.overrideredirect(True)
+splash.geometry("550x450")
+splash.configure(bg="#121212")
+
+# Center the splash screen
+screen_width = splash.winfo_screenwidth()
+screen_height = splash.winfo_screenheight()
+x = int((screen_width / 2) - (400 / 2))
+y = int((screen_height / 2) - (300 / 2))
+splash.geometry(f"+{x}+{y}")
+
+# Add content to the splash screen
+logo_image_splash = PhotoImage(file=BASE_PATH / "assets" / "splash_image.png")
+logo_label = Label(splash, image=logo_image_splash, bg="#121212")
+logo_label.pack(expand=True)
+
+# Keep a reference to prevent garbage collection
+splash.logo_image_splash = logo_image_splash
+
+# Function to destroy splash screen and show main window
+def show_main_window():
+    splash.destroy()
+    # Center the main window
+    window.update_idletasks()
+    screen_width = window.winfo_screenwidth()
+    screen_height = window.winfo_screenheight()
+    window_width = 1000
+    window_height = 885
+    x = (screen_width // 2) - (window_width // 2)
+    y = (screen_height // 2) - (window_height // 2)
+    window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+    window.deiconify()  # Show the main window
+
+# Schedule splash screen to close after 3 seconds
+window.after(6000, show_main_window)
+
 # Create frames for different pages
 edit_config_frame = Frame(window, bg="#121212")  # Edit configuration frame
 dashboard_frame = Frame(window, bg="#121212")  # Dashboard/Main frame
 schedule_frame = Frame(window, bg="#121212")  # Scan scheduler frame
+
 # Place all frames in the same location; only the raised frame will be visible
 for frame in (edit_config_frame, dashboard_frame, schedule_frame):
     frame.place(relwidth=1, relheight=1)
@@ -1246,7 +1328,7 @@ button_8 = Button(
     image=button_image_8,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_8 clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 button_8.place(
@@ -1283,7 +1365,7 @@ button_9 = Button(
     image=button_image_9,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_9 clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 button_9.place(
@@ -1337,7 +1419,7 @@ button_10 = Button(
     image=button_image_10,
     borderwidth=0,
     highlightthickness=0,
-    # command=lambda: print("button_10 clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 button_10.place(
@@ -1609,7 +1691,6 @@ button_18 = Button(
     image=button_image_18,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_18 clicked"),
     relief="flat"
 )
 button_18.place(
@@ -1663,7 +1744,6 @@ button_20 = Button(
     image=button_image_20,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_20 clicked"),
     relief="flat"
 )
 button_20.place(
@@ -1717,7 +1797,6 @@ button_22 = Button(
     image=button_image_22,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_22 clicked"),
     relief="flat"
 )
 button_22.place(
@@ -1759,7 +1838,6 @@ button_24 = Button(
     image=button_image_24,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_24 clicked"),
     relief="flat"
 )
 button_24.place(
@@ -1797,7 +1875,6 @@ button_25 = Button(
     image=button_image_25,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_25 clicked"),
     relief="flat"
 )
 button_25.place(
@@ -1835,7 +1912,6 @@ button_26 = Button(
     image=button_image_26,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_26 clicked"),
     relief="flat"
 )
 button_26.place(
@@ -1904,7 +1980,6 @@ button_28 = Button(
     image=button_image_28,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("button_28 clicked"),
     relief="flat"
 )
 button_28.place(
@@ -2280,7 +2355,7 @@ edit_conf_button_9 = Button(
     image=edit_conf_button_image_9,
     borderwidth=0,
     highlightthickness=0,
-    #    command=lambda: show_frame(page2_frame),  # Navigate to page2_frame
+    command=open_supplied_link,
     relief="flat"
 )
 edit_conf_button_9.place(
@@ -2316,7 +2391,7 @@ edit_conf_button_10 = Button(
     image=edit_conf_button_image_10,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_10 clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 edit_conf_button_10.place(
@@ -2373,7 +2448,7 @@ edit_conf_button_11 = Button(
     image=edit_conf_button_image_11,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_11 clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 edit_conf_button_11.place(
@@ -2395,7 +2470,6 @@ edit_conf_button_12 = Button(
     image=edit_conf_button_image_12,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_12 clicked"),
     relief="flat"
 )
 edit_conf_button_12.place(
@@ -2922,7 +2996,6 @@ edit_conf_button_27 = Button(
     image=edit_conf_button_image_27,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_27 clicked"),
     relief="flat"
 )
 edit_conf_button_27.place(
@@ -2946,7 +3019,6 @@ edit_conf_button_28 = Button(
     image=edit_conf_button_image_28,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_28 clicked"),
     relief="flat"
 )
 edit_conf_button_28.place(
@@ -2969,7 +3041,6 @@ edit_conf_button_29 = Button(
     image=edit_conf_button_image_29,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_29 clicked"),
     relief="flat"
 )
 edit_conf_button_29.place(
@@ -3011,7 +3082,6 @@ edit_conf_button_30 = Button(
     image=edit_conf_button_image_30,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_30 clicked"),
     relief="flat"
 )
 edit_conf_button_30.place(
@@ -3034,7 +3104,6 @@ edit_conf_button_31 = Button(
     image=edit_conf_button_image_31,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_31 clicked"),
     relief="flat"
 )
 edit_conf_button_31.place(
@@ -3058,7 +3127,6 @@ edit_conf_button_32 = Button(
     image=edit_conf_button_image_32,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_32 clicked"),
     relief="flat"
 )
 edit_conf_button_32.place(
@@ -3082,7 +3150,6 @@ edit_conf_button_33 = Button(
     image=edit_conf_button_image_33,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_33 clicked"),
     relief="flat"
 )
 edit_conf_button_33.place(
@@ -3105,7 +3172,6 @@ edit_conf_button_34 = Button(
     image=edit_conf_button_image_34,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_34 clicked"),
     relief="flat"
 )
 edit_conf_button_34.place(
@@ -3129,7 +3195,6 @@ edit_conf_button_35 = Button(
     image=edit_conf_button_image_35,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("edit_conf_button_35 clicked"),
     relief="flat"
 )
 edit_conf_button_35.place(
@@ -3192,7 +3257,6 @@ dashboard_button_1 = Button(
     image=dashboard_button_image_1,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("dashboard_button_1 clicked"),
     relief="flat"
 )
 dashboard_button_1.place(
@@ -3247,14 +3311,14 @@ dashboard_output_text.configure(yscrollcommand=output_scrollbar.set)
 dashboard_output_text.tag_configure('spacing', spacing2=5)
 
 # Function to insert text into the Text widget
-def insert_output(line):
+def insert_initial(line):
     dashboard_output_text.config(state='normal')
     dashboard_output_text.insert('end', line, 'spacing')
     dashboard_output_text.see('end')
     dashboard_output_text.config(state='disabled')
 
 # Example usage: Insert some text
-insert_output(
+insert_initial(
 """This window will populate with logs once you start a scan.
 """
 )
@@ -3275,7 +3339,7 @@ dashboard_button_3 = Button(
     image=dashboard_button_image_3,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("dashboard_button_3 clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 dashboard_button_3.place(
@@ -3337,7 +3401,6 @@ dashboard_button_5 = Button(
     image=dashboard_button_image_5,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: print("dashboard_button_5 clicked"),
     relief="flat"
 )
 dashboard_button_5.place(
@@ -3390,7 +3453,7 @@ dashboard_button_6 = Button(
     image=dashboard_button_image_6,
     borderwidth=0,
     highlightthickness=0,
-    #command=lambda: print("documentation button clicked"),
+    command=open_supplied_link,
     relief="flat"
 )
 dashboard_button_6.place(
@@ -3862,7 +3925,12 @@ vuln_image_label.place(x=350, y=550)
 
 # Exploit graph placeholder
 exploit_graph_placeholder = PhotoImage(file=relative_to_assets("exploit_graph_placeholder.png", 1))
-exploit_image_label = Label(dashboard_frame, image=exploit_graph_placeholder, borderwidth=0, bg="#313237", highlightthickness=0)
+exploit_image_label = Label(
+    dashboard_frame,
+    image=exploit_graph_placeholder,
+    borderwidth=0,
+    bg="#313237",
+    highlightthickness=0)
 exploit_image_label.place(x=660, y=550)
 
 # Define the text to display in the two Text widgets
@@ -3931,6 +3999,5 @@ dashboard_button_18.bind('<Enter>', dashboard_button_18_hover)
 dashboard_button_18.bind('<Leave>', dashboard_button_18_leave)
 
 window.resizable(False, False)  # Prevent the window from being resized
-window.deiconify()  # Show the window after all widgets have been loaded
 window.after(100, process_output_queue)  # Start processing the output queue
 window.mainloop()  # Start the Tkinter event loop
