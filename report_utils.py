@@ -81,6 +81,8 @@ def add_later_page_number(canvas, doc):
     canvas.setFont("Helvetica", 10)
     canvas.drawRightString(200 * mm, 15 * mm, text)
 
+import re
+
 def parse_metasploit_report(report_path):
     """
     Parse the Metasploit TXT report and extract exploitation data.
@@ -108,10 +110,28 @@ def parse_metasploit_report(report_path):
     current_exploit = {}
     payload_total = payload_successful = payload_failed = None
     capturing_payload_stats = False
+    in_cve_without_exploits_section = False
 
     with open(report_path, 'r') as file:
         for line in file:
             line = line.strip()
+
+            # Detect the section listing CVEs without exploits
+            if "The following CVEs were detected, but Metasploit does not have an exploit to target these." in line:
+                in_cve_without_exploits_section = True
+                # Skip the next line (the one that says "Search results from ExploitDB...")
+                next(file, None)
+                continue
+
+            if in_cve_without_exploits_section:
+                # Detect end of the CVEs section
+                if line.startswith("End of Report Summary"):
+                    in_cve_without_exploits_section = False
+                    continue
+                # Check if the line starts with 'CVE-'
+                if line.startswith("CVE-"):
+                    cves_without_exploits.append(line)
+                continue
 
             # Check for Exploitable CVE Found
             cve_found_match = cve_found_re.search(line)
@@ -155,7 +175,6 @@ def parse_metasploit_report(report_path):
                         current_exploit['payload_successful'] = payload_successful
                         current_exploit['payload_failed'] = payload_failed
                         exploited_cves.append(current_exploit.copy())
-                        total_exploited += 1
                         current_exploit = {}
                         # Reset payload stats
                         payload_total = payload_successful = payload_failed = None
@@ -170,16 +189,6 @@ def parse_metasploit_report(report_path):
                 incompatible_cves = int(summary_match.group(3))
                 continue
 
-            # Detect the section listing CVEs without exploits
-            if "The following CVEs were detected, but Metasploit does not have an exploit to target these:" in line:
-                # Read subsequent lines for CVEs
-                for cve_line in file:
-                    cve_line = cve_line.strip()
-                    if not cve_line:
-                        break
-                    if cve_line.startswith("CVE-"):
-                        cves_without_exploits.append(cve_line)
-
     parsed_data = {
         "exploited_cves": exploited_cves,
         "cves_without_exploits": cves_without_exploits,
@@ -189,6 +198,7 @@ def parse_metasploit_report(report_path):
     }
 
     return parsed_data
+
 
 
 def generate_report(
