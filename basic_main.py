@@ -1,50 +1,61 @@
 import os
+import sys
 import subprocess
 from termcolor import colored
+from logger import logger
+import time  # Ensure you import time
 
-def run_nuclei_scan(target_url, output_dir):
+def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
     """
-    Run a basic Nuclei scan on a single target using Docker.
-    
+    Run Nuclei scans using Docker on a list of targets and combine the results.
+    This function reads target hosts from a file, runs Nuclei scans on each target
+    using specified templates, combines the individual scan outputs into a single
+    output file, and displays alerts for findings with certain keywords.
     Args:
-        target_url (str): The URL of the target to scan.
-        output_dir (str): The directory where Nuclei output files will be saved.
+        nuclei_target_dir (str): The directory where Nuclei output files will be saved.
+        nuclei_target_file (str): The file containing the list of target hosts.
     """
-    # Define the Nuclei Docker command
-    docker_command = f"docker run --rm -v {output_dir}:{output_dir} projectdiscovery/nuclei -target {target_url} -t network/ -o {output_dir}/nuclei_output.txt"
-    
-    print(f"Running Docker command: {docker_command}")
+    max_alert_length = 102  # Maximum length for alert messages
+    alert_prefix = "[ALERT] "  # Prefix for alert messages
 
-    try:
-        # Run the Docker command
-        result = subprocess.run(
-            docker_command,
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        
-        # Print the output from Docker
-        print(result.stdout)
-        if result.stderr:
-            print(colored(result.stderr, "red"))
-        
-        if result.returncode != 0:
-            print(colored(f"Scan failed with error code: {result.returncode}", "red"))
-        else:
-            print(colored(f"Scan completed successfully. Output saved to {output_dir}/nuclei_output.txt", "green"))
-    
-    except Exception as e:
-        print(colored(f"An error occurred while running the Docker command: {e}", "red"))
+    # Generate a timestamp to append to output filenames
+    nuclei_timestamp = time.strftime("%Y%m%d_%H%M%S")
+    nuclei_combined_output_file = os.path.join(
+        nuclei_target_dir, f"{nuclei_timestamp}_combined.txt"
+    )
 
-if __name__ == "__main__":
-    # Example target and output directory
-    target_url = "http://example.com"
-    output_dir = os.path.expanduser("~/medusaguard/nuclei_results")
+    # Read target hosts from the target file
+    with open(nuclei_target_file, "r") as file:
+        nuclei_targets = [line.strip() for line in file if line.strip()]
 
-    # Ensure the output directory exists
-    os.makedirs(output_dir, exist_ok=True)
+    # Define the Nuclei scan commands to execute using Docker container
+    nuclei_commands = {
+        "network": "docker run --rm -v {0}:{0} projectdiscovery/nuclei -target {1} -t network/ -o {2}",
+    }
 
-    # Run the Nuclei scan
-    run_nuclei_scan(target_url, output_dir)
+    # Run the Nuclei scan for each target
+    for nuclei_target in nuclei_targets:
+        for scan_type, nuclei_command in nuclei_commands.items():
+            nuclei_output_file = os.path.join(nuclei_target_dir, f"{nuclei_target}_{scan_type}.txt")
+            nuclei_cmd = nuclei_command.format(nuclei_target_dir, nuclei_target, nuclei_output_file)
+
+            print(colored(f"Running {scan_type} scan on {nuclei_target}...", "white"))
+            
+            # Run the Nuclei scan command and stream the output in real-time
+            process = subprocess.Popen(nuclei_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+            
+            # Stream output line by line
+            for line in iter(process.stdout.readline, ''):
+                print(line, end="")  # Print each line to the console immediately
+                sys.stdout.flush()  # Ensure real-time display by flushing output
+
+            # Wait for the process to complete
+            process.wait()
+
+            if process.returncode != 0:
+                print(colored(f"Scan failed for {nuclei_target}", "red"))
+            else:
+                print(colored(f"Scan completed for {nuclei_target}, results saved to {nuclei_output_file}", "green"))
+
+    # Return combined output path
+    return nuclei_combined_output_file
