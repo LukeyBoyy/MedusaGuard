@@ -76,6 +76,7 @@ def main():
     args = parser.parse_args()
 
     # Check if the script is being run with root privileges
+    '''
     if os.getuid() != 0:
         exit(
             colored(
@@ -83,6 +84,7 @@ def main():
                 "red",
             )
         )
+    '''
 
     # Display a warning message
     print(
