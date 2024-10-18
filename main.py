@@ -95,12 +95,28 @@ def main():
     time.sleep(2.5)
 
     # Create directories for storing outputs if they don't already exist
-    os.makedirs("openvas_reports", exist_ok=True)
-    os.makedirs("custom_reports", exist_ok=True)
-    os.makedirs("nuclei_results", exist_ok=True)
-    os.makedirs("nikto_results", exist_ok=True)
-    os.makedirs("metasploit_results", exist_ok=True)
-    os.makedirs("result_graphs", exist_ok=True)
+    # Get the home directory of the original user, even if running with sudo
+    if "SUDO_USER" in os.environ:
+        user_home_dir = os.path.expanduser(f"~{os.environ['SUDO_USER']}")
+    else:
+        user_home_dir = os.path.expanduser("~")
+
+# Define the base directory and store subdirectories in variables
+    base_dir = os.path.join(user_home_dir, "medusaguard")
+    openvas_reports_dir = os.path.join(base_dir, "openvas_reports")
+    custom_reports_dir = os.path.join(base_dir, "custom_reports")
+    nuclei_results_dir = os.path.join(base_dir, "nuclei_results")
+    nikto_results_dir = os.path.join(base_dir, "nikto_results")
+    metasploit_results_dir = os.path.join(base_dir, "metasploit_results")
+    result_graphs_dir = os.path.join(base_dir, "result_graphs")
+    targets = os.path.join(base_dir, "targets.txt")
+
+    os.makedirs(openvas_reports_dir, exist_ok=True)
+    os.makedirs(custom_reports_dir, exist_ok=True)
+    os.makedirs(nuclei_results_dir, exist_ok=True)
+    os.makedirs(nikto_results_dir, exist_ok=True)
+    os.makedirs(metasploit_results_dir, exist_ok=True)
+    os.makedirs(result_graphs_dir, exist_ok=True)
 
     # Update the configuration file with provided arguments
     update_config_file(
@@ -131,21 +147,25 @@ def main():
     scan_config = config["task"]["scan_config"]
     scanner = config["task"]["scanner"]
 
+    '''
     # Run Nuclei Scans
-    update_nuclei()  # Update Nuclei templates
+    #update_nuclei()  # Update Nuclei templates
+    
     nuclei_combined_output_file = run_nuclei_scans(
-        nuclei_target_dir="nuclei_results", nuclei_target_file="targets.txt"
+        nuclei_target_dir=nuclei_results_dir, nuclei_target_file=targets
     )
 
     # Run Nikto Scans
     nikto_combined_output_file = run_nikto_scans(
-        nikto_target_dir="nikto_results", nikto_target_file="targets.txt"
+        nikto_target_dir=nikto_results_dir, nikto_target_file=targets
     )
 
     # Update Greenbone Vulnerability Manager feeds
-    update_nvt()
-    update_scap()
-    update_cert()
+    # Commenting these out as they are not required in the docker branch
+    # These are updating during deployment of the docker container
+    #update_nvt()
+    #update_scap()
+    #update_cert()
 
     # Run OpenVAS scan and get the path to the generated CSV report and task details
     (
@@ -209,8 +229,10 @@ def main():
         )
     else:
         print("Failed to generate the CSV report, skipping report generation.")
+    '''
 
     # Calculate and print the duration of the script execution
+
     end_time = time.time()
     duration = end_time - start_time
 
