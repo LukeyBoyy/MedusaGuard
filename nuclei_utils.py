@@ -10,20 +10,21 @@ print_timestamp = time.strftime("%d-%m-%Y %H:%M:%S")
 
 def update_nuclei():
     """
-    Update Nuclei to the latest version.
-
-    This function runs 'nuclei -version' to ensure that Nuclei is up to date.
+    Update Nuclei to the latest version using the Docker container.
     """
     try:
-        # Command to check Nuclei version (you can replace this with the actual update command)
-        nuclei_command = ["nuclei", "-update"]
+        # Command to run Nuclei update within Docker container
+        nuclei_command = [
+            "docker", "run", "--rm",
+            "projectdiscovery/nuclei", "-update"
+        ]
         print(colored(">>> Nuclei Vulnerability Scan", attrs=["bold"]))
         nuclei_msg = colored("Updating Nuclei...", "white")
 
         # Display the update message
         print(nuclei_msg, end="", flush=True)
 
-        # Run the Nuclei update command
+        # Run the Nuclei update command inside the Docker container
         result = subprocess.run(
             nuclei_command,
             stdout=subprocess.PIPE,
@@ -45,7 +46,7 @@ def update_nuclei():
 
 def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
     """
-    Run Nuclei scans on a list of targets and combine the results.
+    Run Nuclei scans using Docker on a list of targets and combine the results.
 
     This function reads target hosts from a file, runs Nuclei scans on each target
     using specified templates, combines the individual scan outputs into a single
@@ -69,11 +70,10 @@ def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
     with open(nuclei_target_file, "r") as file:
         nuclei_targets = [line.strip() for line in file if line.strip()]
 
-    # Define the Nuclei scan commands to execute
+    # Define the Nuclei scan commands to execute (using Docker container)
     nuclei_commands = {
-        "network": "nuclei -target {} -t network/ -o {}",
-        # "http": "nuclei -target {} -t http/ -o {}",
-        # "rdp": "nuclei -target rdp://{} -o {}"
+        "network": "docker run --rm -v {0}:{0} projectdiscovery/nuclei -target {1} -t network/ -o {2}",
+        # "http": "docker run --rm -v {0}:{0} projectdiscovery/nuclei -target {1} -t http/ -o {2}",
         # You can add more scan types and their corresponding commands here
     }
 
@@ -81,17 +81,17 @@ def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
         colored(f"[{print_timestamp}] [+] ", "cyan")
         + "Nuclei Vulnerability Scan Started"
     )
-    logger.info("Nuclei vulnerability scsn started")
+    logger.info("Nuclei vulnerability scan started")
 
-    # Iterate over each target and run Nuclei scans
+    # Iterate over each target and run Nuclei scans using Docker
     for nuclei_target in nuclei_targets:
         for scan_type, nuclei_command in nuclei_commands.items():
             # Path to the individual output file for this target and scan type
             nuclei_output_file = os.path.join(
                 nuclei_target_dir, f"{nuclei_target}_{scan_type}.txt"
             )
-            # Construct the Nuclei command for the target
-            nuclei_cmd = nuclei_command.format(nuclei_target, nuclei_output_file)
+            # Construct the Nuclei Docker command for the target
+            nuclei_cmd = nuclei_command.format(nuclei_target_dir, nuclei_target, nuclei_output_file)
             nuclei_scan_msg = colored(
                 f"Running {scan_type.replace('_', ' ')} scan on {nuclei_target}...",
                 "white",
@@ -101,7 +101,7 @@ def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
             # Display the scan message
             print(nuclei_scan_msg, end="", flush=True)
 
-            # Run the Nuclei scan command
+            # Run the Nuclei scan command in Docker
             try:
                 subprocess.run(
                     nuclei_cmd,
@@ -113,7 +113,7 @@ def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
                 )
             except subprocess.CalledProcessError as e:
                 print(colored(f"\n[ERROR] Scan failed: {e}", "red"))
-                logger.error(f"An error occurred when scanning while scanning {nuclei_target}: {e}")
+                logger.error(f"An error occurred while scanning {nuclei_target}: {e}")
 
             print(
                 f"\n{scan_type.replace('_', ' ').capitalize()} scan results saved to "
