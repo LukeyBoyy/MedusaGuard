@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import subprocess
 from termcolor import colored
@@ -27,8 +28,8 @@ def update_nuclei():
         # Run the Nuclei update command inside the Docker container
         result = subprocess.run(
             nuclei_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
             text=True,
             check=True,
             timeout=2700,
@@ -106,8 +107,8 @@ def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
                 subprocess.run(
                     nuclei_cmd,
                     shell=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
+                    stdout=sys.stdout,
+                    stderr=sys.stderr,
                     timeout=3600,
                     check=True,
                 )
