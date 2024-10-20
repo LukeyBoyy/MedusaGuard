@@ -33,6 +33,7 @@ from tkinter import (
     Scrollbar,
     OptionMenu,
 )
+#look for and replace all open_directory
 
 """
 MedusaGuard GUI Application
@@ -302,6 +303,54 @@ def save_dark_popup():
 
     ok_button = ttk.Button(popup, text="OK", command=popup.destroy)
     ok_button.pack(pady=10)
+
+def setup_directories():
+    """
+    Create necessary directories for storing outputs and configuration files if they don't already exist.
+    
+    Returns:
+        dict: A dictionary containing paths to the created directories and the config file.
+    """
+    # Get the home directory of the original user, even if running with sudo
+    if "SUDO_USER" in os.environ:
+        user_home_dir = os.path.expanduser(f"~{os.environ['SUDO_USER']}")
+    else:
+        user_home_dir = os.path.expanduser("~")
+
+    # Define the base directory and other subdirectories
+    base_dir = os.path.join(user_home_dir, "medusaguard")
+    openvas_reports_dir = os.path.join(base_dir, "openvas_reports")
+    custom_reports_dir = os.path.join(base_dir, "custom_reports")
+    nuclei_results_dir = os.path.join(base_dir, "nuclei_results")
+    nikto_results_dir = os.path.join(base_dir, "nikto_results")
+    metasploit_results_dir = os.path.join(base_dir, "metasploit_results")
+    result_graphs_dir = os.path.join(base_dir, "result_graphs")
+    config_dir = os.path.join(user_home_dir, ".config", "medusaguard")
+
+    # Create the directories if they don't exist
+    os.makedirs(openvas_reports_dir, exist_ok=True)
+    os.makedirs(custom_reports_dir, exist_ok=True)
+    os.makedirs(nuclei_results_dir, exist_ok=True)
+    os.makedirs(nikto_results_dir, exist_ok=True)
+    os.makedirs(metasploit_results_dir, exist_ok=True)
+    os.makedirs(result_graphs_dir, exist_ok=True)
+    os.makedirs(config_dir, exist_ok=True)
+
+    # Define the config file path
+    config_file = os.path.join(config_dir, "config.ini")
+
+    # Return a dictionary of all the paths
+    return {
+        "base_dir": base_dir,
+        "openvas_reports_dir": openvas_reports_dir,
+        "custom_reports_dir": custom_reports_dir,
+        "nuclei_results_dir": nuclei_results_dir,
+        "nikto_results_dir": nikto_results_dir,
+        "metasploit_results_dir": metasploit_results_dir,
+        "result_graphs_dir": result_graphs_dir,
+        "config_dir": config_dir,
+        "config_file": config_file
+    }
 
 # -------------------------------------------
 # Scan Functions
@@ -986,6 +1035,8 @@ for frame in (edit_config_frame, dashboard_frame, schedule_frame):
 show_frame(dashboard_frame)  # Initially display the dashboard frame
 
 # Check if the script is being run with root privileges
+# Commented out as it's not required in the docker version
+'''
 if os.getuid() != 0:
     exit(
         colored(
@@ -993,7 +1044,9 @@ if os.getuid() != 0:
             "red",
         )
     )
+'''
 
+directories = setup_directories()
 # -------------------------------------------
 # Variables and UI Elements for Schedule Page
 # -------------------------------------------
@@ -1069,7 +1122,7 @@ stop_scan_button = Button(
     image=stop_scan_image,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('custom_reports'),
+    command=lambda: open_directory(directories["custom_reports_dir"]),
     relief="flat"
 )
 stop_scan_button.place(
@@ -1106,7 +1159,7 @@ button_2 = Button(
     image=button_image_2,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('openvas_reports'),
+    command=lambda: open_directory(directories["openvas_reports_dir"]),
     relief="flat"
 )
 button_2.place(
@@ -1143,7 +1196,7 @@ button_3 = Button(
     image=button_image_3,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('nuclei_results'),
+    command=lambda: open_directory(directories["nuclei_results_dir"]),
     relief="flat"
 )
 button_3.place(
@@ -1180,7 +1233,7 @@ button_4 = Button(
     image=button_image_4,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('metasploit_results'),
+    command=lambda: open_directory(directories["metasploit_results_dir"]),
     relief="flat"
 )
 button_4.place(
@@ -1217,7 +1270,7 @@ button_5 = Button(
     image=button_image_5,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('nikto_results'),
+    command=lambda: open_directory(directories["nikto_results_dir"]),
     relief="flat"
 )
 button_5.place(
@@ -1254,7 +1307,7 @@ button_6 = Button(
     image=button_image_6,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('config.ini'),
+    command=lambda: open_directory(directories["config_file"]),
     relief="flat"
 )
 button_6.place(
@@ -1291,7 +1344,7 @@ button_7 = Button(
     image=button_image_7,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('targets.txt'),
+    command=lambda: open_directory(directories["targets.txt"]),
     relief="flat"
 )
 button_7.place(
@@ -2066,7 +2119,7 @@ edit_conf_button_1 = Button(
     image=edit_conf_button_image_1,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('custom_reports'),
+    command=lambda: open_directory(directories["custom_reports_dir"]),
     relief="flat"
 )
 edit_conf_button_1.place(
@@ -2102,7 +2155,7 @@ edit_conf_button_2 = Button(
     image=edit_conf_button_image_2,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('openvas_reports'),
+    command=lambda: open_directory(directories["openvas_reports"]),
     relief="flat"
 )
 edit_conf_button_2.place(
@@ -2138,7 +2191,7 @@ edit_conf_button_3 = Button(
     image=edit_conf_button_image_3,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('nuclei_results'),
+    command=lambda: open_directory('nuclei_results_dir'),
     relief="flat"
 )
 edit_conf_button_3.place(
@@ -2174,7 +2227,7 @@ edit_conf_button_4 = Button(
     image=edit_conf_button_image_4,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('metasploit_results'),
+    command=lambda: open_directory(directories["metasploit_results_dir"]),
     relief="flat"
 )
 edit_conf_button_4.place(
@@ -2210,7 +2263,7 @@ edit_conf_button_5 = Button(
     image=edit_conf_button_image_5,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('nikto_results'),
+    command=lambda: open_directory(directories["nikto_results_dir"]),
     relief="flat"
 )
 edit_conf_button_5.place(
@@ -2246,7 +2299,7 @@ edit_conf_button_6 = Button(
     image=edit_conf_button_image_6,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('config.ini'),
+    command=lambda: open_directory(directories["config_file"]),
     relief="flat"
 )
 edit_conf_button_6.place(
@@ -3524,7 +3577,7 @@ dashboard_button_8 = Button(
     image=dashboard_button_image_8,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('custom_reports'),
+    command=lambda: open_directory(directories["custom_reports_dir"]),
     relief="flat"
 )
 dashboard_button_8.place(
@@ -3560,7 +3613,7 @@ dashboard_button_9 = Button(
     image=dashboard_button_image_9,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('openvas_reports'),
+    command=lambda: open_directory(directories["openvas_reports_dir"]),
     relief="flat"
 )
 dashboard_button_9.place(
@@ -3596,7 +3649,7 @@ dashboard_button_10 = Button(
     image=dashboard_button_image_10,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('nuclei_results'),
+    command=lambda: open_directory(directories["nuclei_results_dir"]),
     relief="flat"
 )
 dashboard_button_10.place(
@@ -3632,7 +3685,7 @@ dashboard_button_11 = Button(
     image=dashboard_button_image_11,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('metasploit_results'),
+    command=lambda: open_directory(directories["metasploit_results_dir"]),
     relief="flat"
 )
 dashboard_button_11.place(
@@ -3668,7 +3721,7 @@ dashboard_button_12 = Button(
     image=dashboard_button_image_12,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('nikto_results'),
+    command=lambda: open_directory(directories["nikto_results"]),
     relief="flat"
 )
 dashboard_button_12.place(
@@ -3704,7 +3757,7 @@ dashboard_button_13 = Button(
     image=dashboard_button_image_13,
     borderwidth=0,
     highlightthickness=0,
-    command=lambda: open_directory('config.ini'),
+    command=lambda: open_directory(directories["config_file"]),
     relief="flat"
 )
 dashboard_button_13.place(

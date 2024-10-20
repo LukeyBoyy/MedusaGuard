@@ -13,6 +13,138 @@ from config_utils import update_config_file
 from nikto_utils import run_nikto_scans
 from exploit_module import *
 
+def parse_arguments(config_file):
+    """
+    Parse command-line arguments and return the parsed args object.
+    
+    Args:
+        config_file (str): The default path to the config.ini file.
+    
+    Returns:
+        argparse.Namespace: The parsed arguments.
+    """
+    parser = argparse.ArgumentParser(
+        description="Update config.ini settings.",
+        epilog="""Example usage:
+        python3 <script_name>.py --config config.ini --username admin --password passwd --target_name router --task_name router_scan""",
+    )
+    
+    # Define all the arguments
+    parser.add_argument(
+        "--config", type=str, default=config_file, help="Path to the config.ini file"
+    )
+    parser.add_argument("--username", type=str, help="Username for the GVM server")
+    parser.add_argument("--password", type=str, help="Password for the GVM server")
+    parser.add_argument("--path", type=str, help="Path to the Unix socket for GVM connection")
+    parser.add_argument("--port_list_name", type=str, help="Port list name for target configuration")
+    parser.add_argument("--scan_config", type=str, help="Scan configuration ID")
+    parser.add_argument("--scanner", type=str, help="Scanner ID")
+    parser.add_argument("--target_name", type=str, help="Name of the target")
+    parser.add_argument("--target_ip", type=str, help="IP address of the target to be scanned or file containing one IP address per line")
+    parser.add_argument("--task_name", type=str, help="Name of the task to be created and executed")
+    
+    return parser.parse_args()
+
+def setup_directories():
+    """
+    Create necessary directories for storing outputs and configuration files if they don't already exist.
+    
+    Returns:
+        dict: A dictionary containing paths to the created directories and the config file.
+    """
+    # Get the home directory of the original user, even if running with sudo
+    if "SUDO_USER" in os.environ:
+        user_home_dir = os.path.expanduser(f"~{os.environ['SUDO_USER']}")
+    else:
+        user_home_dir = os.path.expanduser("~")
+
+    # Define the base directory and other subdirectories
+    base_dir = os.path.join(user_home_dir, "medusaguard")
+    openvas_reports_dir = os.path.join(base_dir, "openvas_reports")
+    custom_reports_dir = os.path.join(base_dir, "custom_reports")
+    nuclei_results_dir = os.path.join(base_dir, "nuclei_results")
+    nikto_results_dir = os.path.join(base_dir, "nikto_results")
+    metasploit_results_dir = os.path.join(base_dir, "metasploit_results")
+    result_graphs_dir = os.path.join(base_dir, "result_graphs")
+    config_dir = os.path.join(user_home_dir, ".config", "medusaguard")
+
+    # Create the directories if they don't exist
+    os.makedirs(openvas_reports_dir, exist_ok=True)
+    os.makedirs(custom_reports_dir, exist_ok=True)
+    os.makedirs(nuclei_results_dir, exist_ok=True)
+    os.makedirs(nikto_results_dir, exist_ok=True)
+    os.makedirs(metasploit_results_dir, exist_ok=True)
+    os.makedirs(result_graphs_dir, exist_ok=True)
+    os.makedirs(config_dir, exist_ok=True)
+
+    # Define the config file path
+    config_file = os.path.join(config_dir, "config.ini")
+
+    # Return a dictionary of all the paths
+    return {
+        "base_dir": base_dir,
+        "openvas_reports_dir": openvas_reports_dir,
+        "custom_reports_dir": custom_reports_dir,
+        "nuclei_results_dir": nuclei_results_dir,
+        "nikto_results_dir": nikto_results_dir,
+        "metasploit_results_dir": metasploit_results_dir,
+        "result_graphs_dir": result_graphs_dir,
+        "config_dir": config_dir,
+        "config_file": config_file
+    }
+
+def update_and_read_config(args):
+    """
+    Update the config file with command-line arguments and read its values.
+
+    Args:
+        args: Parsed command-line arguments.
+
+    Returns:
+        config: The configparser object after reading the updated config file.
+    """
+    # Update the configuration file with provided arguments
+    update_config_file(
+        args.config,
+        args.username,
+        args.password,
+        args.path,
+        args.port_list_name,
+        args.scan_config,
+        args.scanner,
+        args.target_name,
+        args.target_ip,
+        args.task_name,
+    )
+
+    # Read the updated config file
+    config = configparser.ConfigParser()
+    config.read(args.config)
+
+    return config
+
+def extract_config_values(config):
+    """
+    Extracts necessary values from the configparser object.
+
+    Args:
+        config: Configparser object containing the configuration data.
+
+    Returns:
+        dict: A dictionary of extracted values.
+    """
+    return {
+        "path": config["connection"]["path"],
+        "username": config["connection"]["username"],
+        "password": config["connection"]["password"],
+        "target_name": config["target"]["target_name"],
+        "target_ip": config["target"]["target_ip"],
+        "port_list_name": config["target"]["port_list_name"],
+        "task_name": config["task"]["task_name"],
+        "scan_config": config["task"]["scan_config"],
+        "scanner": config["task"]["scanner"]
+    }
+
 
 def main():
     """
@@ -44,38 +176,17 @@ def main():
     # Start timing the execution
     start_time = time.time()
 
-    # Parse command-line arguments
-    parser = argparse.ArgumentParser(
-        description="Update config.ini settings.",
-        epilog="""Example usage:
-    sudo python3 <script_name>.py --config config.ini --username admin --password passwd --target_name router --task_name router_scan""",
-    )
-    parser.add_argument(
-        "--config", type=str, default="config.ini", help="Path to the config.ini file"
-    )
-    parser.add_argument("--username", type=str, help="Username for the GVM server")
-    parser.add_argument("--password", type=str, help="Password for the GVM server")
-    parser.add_argument(
-        "--path", type=str, help="Path to the Unix socket for GVM connection"
-    )
-    parser.add_argument(
-        "--port_list_name", type=str, help="Port list name for target configuration"
-    )
-    parser.add_argument("--scan_config", type=str, help="Scan configuration ID")
-    parser.add_argument("--scanner", type=str, help="Scanner ID")
-    parser.add_argument("--target_name", type=str, help="Name of the target")
-    parser.add_argument(
-        "--target_ip",
-        type=str,
-        help="IP address of the target to be scanned or file containing one IP address per line",
-    )
-    parser.add_argument(
-        "--task_name", type=str, help="Name of the task to be created and executed"
-    )
+    directories = setup_directories()
 
-    args = parser.parse_args()
+
+    
+
+    # Parse command-line arguments
+
+    args = parse_arguments(directories["config_file"])
 
     # Check if the script is being run with root privileges
+    # This is disabled in the docker version as root priveleges are not required
     '''
     if os.getuid() != 0:
         exit(
@@ -96,67 +207,23 @@ def main():
     )
     time.sleep(2.5)
 
-    # Create directories for storing outputs if they don't already exist
-    # Get the home directory of the original user, even if running with sudo
-    if "SUDO_USER" in os.environ:
-        user_home_dir = os.path.expanduser(f"~{os.environ['SUDO_USER']}")
-    else:
-        user_home_dir = os.path.expanduser("~")
 
-# Define the base directory and store subdirectories in variables
-    base_dir = os.path.join(user_home_dir, "medusaguard")
-    openvas_reports_dir = os.path.join(base_dir, "openvas_reports")
-    custom_reports_dir = os.path.join(base_dir, "custom_reports")
-    nuclei_results_dir = os.path.join(base_dir, "nuclei_results")
-    nikto_results_dir = os.path.join(base_dir, "nikto_results")
-    metasploit_results_dir = os.path.join(base_dir, "metasploit_results")
-    result_graphs_dir = os.path.join(base_dir, "result_graphs")
-    targets = os.path.join(base_dir, "targets.txt")
 
-    os.makedirs(openvas_reports_dir, exist_ok=True)
-    os.makedirs(custom_reports_dir, exist_ok=True)
-    os.makedirs(nuclei_results_dir, exist_ok=True)
-    os.makedirs(nikto_results_dir, exist_ok=True)
-    os.makedirs(metasploit_results_dir, exist_ok=True)
-    os.makedirs(result_graphs_dir, exist_ok=True)
+    # Update config and read values
+    config = update_and_read_config(args)
 
-    # Update the configuration file with provided arguments
-    update_config_file(
-        args.config,
-        args.username,
-        args.password,
-        args.path,
-        args.port_list_name,
-        args.scan_config,
-        args.scanner,
-        args.target_name,
-        args.target_ip,
-        args.task_name,
-    )
+    # Extract values from config
+    config_values = extract_config_values(config)
 
-    # Read configuration settings from the updated config.ini file
-    config = configparser.ConfigParser()
-    config.read(args.config)
-
-    # Extract configuration values
-    path = config["connection"]["path"]
-    username = config["connection"]["username"]
-    password = config["connection"]["password"]
-    target_name = config["target"]["target_name"]
-    target_ip = config["target"]["target_ip"]
-    port_list_name = config["target"]["port_list_name"]
-    task_name = config["task"]["task_name"]
-    scan_config = config["task"]["scan_config"]
-    scanner = config["task"]["scanner"]
-
-    '''
+    
     # Run Nuclei Scans
     #update_nuclei()  # Update Nuclei templates
     
     nuclei_combined_output_file = run_nuclei_scans(
-        nuclei_target_dir=nuclei_results_dir, nuclei_target_file=targets
+        nuclei_target_dir=directories["nuclei_results_dir"], nuclei_target_file=directories["targets"]
     )
 
+    '''
     # Run Nikto Scans
     nikto_combined_output_file = run_nikto_scans(
         nikto_target_dir=nikto_results_dir, nikto_target_file=targets
