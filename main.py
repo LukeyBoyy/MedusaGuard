@@ -93,6 +93,19 @@ def setup_directories():
         "config_file": config_file
     }
 
+def check_root_privileges():
+    """
+    Check if the script is being run with root privileges. If not, exit the program.
+    """
+    if os.getuid() != 0:
+        exit(
+            colored(
+                "You need to have root privileges to run this script.\nPlease try again, this time using 'sudo'. Exiting...",
+                "red",
+            )
+        )
+
+
 def update_and_read_config(args):
     """
     Update the config file with command-line arguments and read its values.
@@ -177,12 +190,6 @@ def main():
     start_time = time.time()
 
     directories = setup_directories()
-
-
-    
-
-    # Parse command-line arguments
-
     args = parse_arguments(directories["config_file"])
 
     # Check if the script is being run with root privileges
