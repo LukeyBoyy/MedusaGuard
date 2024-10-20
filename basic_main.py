@@ -1,4 +1,5 @@
 import os
+import sys
 import subprocess
 from termcolor import colored
 
@@ -20,8 +21,8 @@ def run_nuclei_scan(target_url, output_dir):
         result = subprocess.run(
             docker_command,
             shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
             text=True
         )
         
