@@ -207,7 +207,7 @@ def main():
     start_time = time.time()
 
     directories = setup_directories()
-    args = parse_arguments(directories["config_file"])
+   # args = parse_arguments(directories["config_file"])
     
     #Disabled check for root as it's not required in docker version
     #check_root_privileges()
@@ -217,10 +217,10 @@ def main():
 
 
     # Update config and read values
-    config = update_and_read_config(args)
+   # config = update_and_read_config(args)
 
     # Extract values from config
-    config_values = extract_config_values(config)
+   # config_values = extract_config_values(config)
 
     
     # Run Nuclei Scans
