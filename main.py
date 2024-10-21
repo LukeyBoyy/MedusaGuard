@@ -66,6 +66,7 @@ def setup_directories():
     nikto_results_dir = os.path.join(base_dir, "nikto_results")
     metasploit_results_dir = os.path.join(base_dir, "metasploit_results")
     result_graphs_dir = os.path.join(base_dir, "result_graphs")
+    targets_dir = os.path.join(base_dir, "targets")
     config_dir = os.path.join(user_home_dir, ".config", "medusaguard")
 
     # Create the directories if they don't exist
@@ -76,9 +77,11 @@ def setup_directories():
     os.makedirs(metasploit_results_dir, exist_ok=True)
     os.makedirs(result_graphs_dir, exist_ok=True)
     os.makedirs(config_dir, exist_ok=True)
+    os.makedirs(targets_dir, exist_ok=True)
 
     # Define the config file path
     config_file = os.path.join(config_dir, "config.ini")
+    targets_file = os.path.join(config_dir, "targets.txt")
 
     # Return a dictionary of all the paths
     return {
@@ -90,7 +93,8 @@ def setup_directories():
         "metasploit_results_dir": metasploit_results_dir,
         "result_graphs_dir": result_graphs_dir,
         "config_dir": config_dir,
-        "config_file": config_file
+        "config_file": config_file,
+        "targets_file": targets_file
     }
 
 def check_root_privileges():
@@ -104,6 +108,19 @@ def check_root_privileges():
                 "red",
             )
         )
+
+def display_warning_message():
+    """
+    Display a warning message regarding authorized target use.
+    """
+    # Display the warning message
+    print(
+        colored(
+            "[WARNING] Only use this tool against authorised targets. You are responsible for your actions!\n",
+            "light_yellow",
+            attrs=["bold"],
+        )
+    )
 
 
 def update_and_read_config(args):
@@ -191,27 +208,10 @@ def main():
 
     directories = setup_directories()
     args = parse_arguments(directories["config_file"])
-
-    # Check if the script is being run with root privileges
-    # This is disabled in the docker version as root priveleges are not required
-    '''
-    if os.getuid() != 0:
-        exit(
-            colored(
-                "You need to have root privileges to run this script.\nPlease try again, this time using 'sudo'. Exiting...",
-                "red",
-            )
-        )
-    '''
-
-    # Display a warning message
-    print(
-        colored(
-            f"[WARNING] Only use this tool against authorised targets. You are responsible for your actions!\n",
-            "light_yellow",
-            attrs=["bold"],
-        )
-    )
+    
+    #Disabled check for root as it's not required in docker version
+    #check_root_privileges()
+    display_warning_message()
     time.sleep(2.5)
 
 
@@ -227,7 +227,7 @@ def main():
     #update_nuclei()  # Update Nuclei templates
     
     nuclei_combined_output_file = run_nuclei_scans(
-        nuclei_target_dir=directories["nuclei_results_dir"], nuclei_target_file=directories["targets"]
+        nuclei_results_dir=directories["nuclei_results_dir"], targets_file_path=directories["targets_file"]
     )
 
     '''
