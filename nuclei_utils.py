@@ -3,25 +3,19 @@ import sys
 import time
 import subprocess
 from termcolor import colored
-from logger import logger
-
-
 
 
 def run_nuclei_scans(nuclei_results_dir, targets_file_path):
-    # Define the Nuclei Docker command
-    #need to change the docker run command slightly, below is the existing version that was working
-    #docker_command = f"docker run --rm -v {nuclei_results_dir}:{nuclei_results_dir} projectdiscovery/nuclei -target {target_url} -t network/ -o {nuclei_results_dir}/nuclei_output.txt"
-    #docker_command = f"docker run --rm -v {nuclei_results_dir}:{nuclei_results_dir} -v {nuclei_file_dir}:{nuclei_file_dir} projectdiscovery/nuclei -target {targets_file_path} -t network/ -o {nuclei_results_dir}/nuclei_output.txt"
     # Get the directory of the targets file
     nuclei_file_dir = os.path.dirname(targets_file_path)
-
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    
     # Path to the combined output file where all individual outputs will be appended
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
     output_filename = f"nuclei_scan_{timestamp}_combined.txt"
     output_file_path = os.path.join(nuclei_results_dir, output_filename)
 
-    docker_command = f"docker run --rm -v {nuclei_results_dir}:{nuclei_results_dir} -v {nuclei_file_dir}:{nuclei_file_dir} projectdiscovery/nuclei -l {targets_file_path} -t network/ -o {output_file_path}"
+    # Define the Nuclei Docker command
+    docker_command = f"docker run --rm -pbar -v {nuclei_results_dir}:{nuclei_results_dir} -v {nuclei_file_dir}:{nuclei_file_dir} projectdiscovery/nuclei -l {targets_file_path} -t network/ -o {output_file_path}"
 
     
     print(f"Running Docker command: {docker_command}")
