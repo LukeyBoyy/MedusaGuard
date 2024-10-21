@@ -41,7 +41,7 @@ def run_nuclei_scan(target_url, output_dir):
 
 if __name__ == "__main__":
     # Example target and output directory
-    target_url = "http://example.com"
+    target_url = "172.21.135.65"
     output_dir = os.path.expanduser("~/medusaguard/nuclei_results")
 
     # Ensure the output directory exists

@@ -6,9 +6,49 @@ from termcolor import colored
 from logger import logger
 
 
+
+
+def run_nuclei_scans(nuclei_results_dir, targets_file_path):
+    # Define the Nuclei Docker command
+    #need to change the docker run command slightly, below is the existing version that was working
+    #docker_command = f"docker run --rm -v {nuclei_results_dir}:{nuclei_results_dir} projectdiscovery/nuclei -target {target_url} -t network/ -o {nuclei_results_dir}/nuclei_output.txt"
+    #docker_command = f"docker run --rm -v {nuclei_results_dir}:{nuclei_results_dir} -v {nuclei_file_dir}:{nuclei_file_dir} projectdiscovery/nuclei -target {targets_file_path} -t network/ -o {nuclei_results_dir}/nuclei_output.txt"
+    # Get the directory of the targets file
+    nuclei_file_dir = os.path.dirname(targets_file_path)
+
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    # Path to the combined output file where all individual outputs will be appended
+    output_filename = f"nuclei_scan_{timestamp}_combined.txt"
+    output_file_path = os.path.join(nuclei_results_dir, output_filename)
+
+    docker_command = f"docker run --rm -v {nuclei_results_dir}:{nuclei_results_dir} -v {nuclei_file_dir}:{nuclei_file_dir} projectdiscovery/nuclei -l {targets_file_path} -t network/ -o {output_file_path}"
+
+    
+    print(f"Running Docker command: {docker_command}")
+
+    try:
+        # Run the Docker command
+        result = subprocess.run(
+            docker_command,
+            shell=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            print(colored(f"Scan failed with error code: {result.returncode}", "red"))
+        else:
+            print(colored(f"Scan completed successfully. Output saved to {output_file_path}", "green"))
+            
+    
+    except Exception as e:
+        print(colored(f"An error occurred while running the Docker command: {e}", "red"))
+    
+    return output_file_path
+
+'''
 print_timestamp = time.strftime("%d-%m-%Y %H:%M:%S")
-
-
 def update_nuclei():
     """
     Update Nuclei to the latest version using the Docker container.
@@ -44,46 +84,6 @@ def update_nuclei():
         print(colored(f"\r[ERROR] Unexpected error: {e}", "red"))
         logger.error(f"An error occurred while updating: {e}")
 
-def run_nuclei_scans(nuclei_results_dir, targets_file_path):
-    # Define the Nuclei Docker command
-    #need to change the docker run command slightly, below is the existing version that was working
-    #docker_command = f"docker run --rm -v {nuclei_results_dir}:{nuclei_results_dir} projectdiscovery/nuclei -target {target_url} -t network/ -o {nuclei_results_dir}/nuclei_output.txt"
-    #docker_command = f"docker run --rm -v {nuclei_results_dir}:{nuclei_results_dir} -v {nuclei_file_dir}:{nuclei_file_dir} projectdiscovery/nuclei -target {targets_file_path} -t network/ -o {nuclei_results_dir}/nuclei_output.txt"
-    # Get the directory of the targets file
-    nuclei_file_dir = os.path.dirname(targets_file_path)
-
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    # Path to the combined output file where all individual outputs will be appended
-    output_filename = f"nuclei_scan_{timestamp}_combined.txt"
-    output_file_path = os.path.join(nuclei_results_dir, output_filename)
-
-    docker_command = f"docker run --rm -v {nuclei_results_dir}:{nuclei_results_dir} -v {nuclei_file_dir}:{nuclei_file_dir} projectdiscovery/nuclei -target {targets_file_path} -t network/ -o {output_file_path}"
-
-    
-    print(f"Running Docker command: {docker_command}")
-
-    try:
-        # Run the Docker command
-        result = subprocess.run(
-            docker_command,
-            shell=True,
-            stdout=sys.stdout,
-            stderr=sys.stderr,
-            text=True
-        )
-        
-        if result.returncode != 0:
-            print(colored(f"Scan failed with error code: {result.returncode}", "red"))
-        else:
-            print(colored(f"Scan completed successfully. Output saved to {output_file_path}", "green"))
-            
-    
-    except Exception as e:
-        print(colored(f"An error occurred while running the Docker command: {e}", "red"))
-    
-    return output_file_path
-
-'''
 def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
     """
     Run Nuclei scans using Docker on a list of targets and combine the results.
