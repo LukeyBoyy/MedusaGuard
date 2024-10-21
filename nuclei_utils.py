@@ -19,7 +19,7 @@ def run_nuclei_scans(nuclei_results_dir, targets_file_path):
         f"docker run --rm -v {nuclei_results_dir}:{nuclei_results_dir} "
         f"-v {nuclei_file_dir}:{nuclei_file_dir} "
         f"projectdiscovery/nuclei -l {targets_file_path} -t network/ "
-        f"-pbar -o {output_file_path}"
+        f"-o {output_file_path}"
     )
     
     print(f"Running Docker command: {docker_command}")
