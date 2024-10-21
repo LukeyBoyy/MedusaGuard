@@ -81,7 +81,7 @@ def setup_directories():
 
     # Define the config file path
     config_file = os.path.join(config_dir, "config.ini")
-    targets_file = os.path.join(config_dir, "targets.txt")
+    targets_file = os.path.join(targets_dir, "targets.txt")
 
     # Return a dictionary of all the paths
     return {
