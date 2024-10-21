@@ -6,7 +6,7 @@ import argparse
 import configparser
 from termcolor import colored
 from datetime import *
-from nuclei_utils import run_nuclei_scans, update_nuclei
+from nuclei_utils import run_nuclei_scans#, update_nuclei
 from openvas_utils import openvas_scan, update_nvt, update_scap, update_cert
 from report_utils import generate_report
 from config_utils import update_config_file
