@@ -1,10 +1,61 @@
 import os
+import sys
 import time
 import subprocess
 from termcolor import colored
 from logger import logger
 
+def run_nikto_scans(nikto_results_dir, targets_file_path):
+    """
+    Run Nikto scans using Docker on a list of targets from a file and combine the results.
 
+    Args:
+        nikto_results_dir (str): Directory where Nikto output files will be saved.
+        targets_file_path (str): The path to the targets file containing a list of hosts.
+    
+    Returns:
+        str: The path to the combined Nikto CSV output file.
+    """
+    # Get the directory of the targets file
+    nikto_file_dir = os.path.dirname(targets_file_path)
+    
+    # Generate a timestamp to append to output filenames
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    output_filename = f"nikto_scan_{timestamp}.csv"
+    output_file_path = os.path.join(nikto_results_dir, output_filename)
+
+    # Construct the Docker command for Nikto using the input file for multiple targets
+    docker_command = (
+        f"docker run --rm -v {nikto_results_dir}:{nikto_results_dir} "
+        f"-v {nikto_file_dir}:{nikto_file_dir} "
+        f"supinf/niktodocker nikto -i /{os.path.basename(targets_file_path)} "
+        f"-nointeractive -Format csv -output /{os.path.basename(output_file_path)}"
+    )
+    
+    print(f"Running Docker command: {docker_command}")
+    
+    try:
+        # Run the Docker command
+        result = subprocess.run(
+            docker_command,
+            shell=True,
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+            text=True
+        )
+
+        if result.returncode != 0:
+            print(colored(f"Scan failed with error code: {result.returncode}", "red"))
+        else:
+            print(colored(f"Scan completed successfully. Output saved to {output_file_path}", "green"))
+    
+    except Exception as e:
+        print(colored(f"An error occurred while running the Docker command: {e}", "red"))
+    
+    return output_file_path
+
+
+'''
 print_timestamp = time.strftime("%d-%m-%Y %H:%M:%S")
 
 
@@ -133,3 +184,4 @@ def run_nikto_scans(nikto_target_dir, nikto_target_file):
 
     # Return the path to the combined Nikto CSV output file
     return nikto_combined_output_file
+    '''

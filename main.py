@@ -226,16 +226,17 @@ def main():
     # Run Nuclei Scans
     #update_nuclei()  # Update Nuclei templates
     
+    '''
     nuclei_combined_output_file = run_nuclei_scans(
         nuclei_results_dir=directories["nuclei_results_dir"], targets_file_path=directories["targets_file"]
     )
-
-    '''
+'''
+   
     # Run Nikto Scans
     nikto_combined_output_file = run_nikto_scans(
-        nikto_target_dir=nikto_results_dir, nikto_target_file=targets
+        nikto_results_dir=directories["nikto_results_dir"], targets_file_path=directories["targets_file"]
     )
-
+    '''
     # Update Greenbone Vulnerability Manager feeds
     # Commenting these out as they are not required in the docker branch
     # These are updating during deployment of the docker container
