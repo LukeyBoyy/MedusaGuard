@@ -1,6 +1,6 @@
 ![Medusa Guard Banner](https://github.com/user-attachments/assets/ba744d99-b6a2-4f27-adbd-1ef93332d052)
 
-# Medusa Guard 🛡️  
+# MedusaGuard 🛡️  
 _Your Enterprise's Shield Against Vulnerabilities_
 
 ![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)
@@ -82,7 +82,7 @@ git clone https://github.com/LukeyBoyy/MedusaGuard.git
 cd MedusaGuard
 
 # Install necessary dependencies
-sudo pip install -r requirements.txt
+sudo pip3 install -r requirements.txt
 ```
 
 ---
