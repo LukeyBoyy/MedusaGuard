@@ -246,7 +246,7 @@ def main():
     #update_cert()
 
     '''
-    check_unix_socket("/run/gvm/gvmd.sock")
+    check_unix_socket("/run/gvmd/gvmd.sock")
     '''
 
     # Run OpenVAS scan and get the path to the generated CSV report and task details
