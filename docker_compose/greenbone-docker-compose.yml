@@ -69,6 +69,7 @@ services:
     image: registry.community.greenbone.net/community/gvmd:stable
     restart: on-failure
     volumes:
+      - ${HOME}/medusaguard:/var/lib/gvm/reports  # Mount a volume for reports
       - gvmd_data_vol:/var/lib/gvm
       - scap_data_vol:/var/lib/gvm/scap-data/
       - cert_data_vol:/var/lib/gvm/cert-data

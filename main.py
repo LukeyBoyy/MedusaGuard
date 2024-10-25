@@ -7,7 +7,7 @@ import configparser
 from termcolor import colored
 from datetime import *
 from nuclei_utils import run_nuclei_scans#, update_nuclei
-from openvas_utils import openvas_scan, update_nvt, update_scap, update_cert
+from openvas_utils import openvas_scan, update_nvt, update_scap, update_cert, check_unix_socket
 from report_utils import generate_report
 from config_utils import update_config_file
 from nikto_utils import run_nikto_scans
@@ -233,16 +233,21 @@ def main():
 '''
    
     # Run Nikto Scans
+    '''
     nikto_combined_output_file = run_nikto_scans(
         nikto_results_dir=directories["nikto_results_dir"], targets_file_path=directories["targets_file"]
     )
-    '''
+    
     # Update Greenbone Vulnerability Manager feeds
     # Commenting these out as they are not required in the docker branch
     # These are updating during deployment of the docker container
     #update_nvt()
     #update_scap()
     #update_cert()
+
+    '''
+    check_unix_socket("/run/gvm/gvmd.sock")
+    '''
 
     # Run OpenVAS scan and get the path to the generated CSV report and task details
     (

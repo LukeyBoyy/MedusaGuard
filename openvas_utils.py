@@ -1,5 +1,6 @@
 import os
 import time
+import socket
 import subprocess
 import xml.etree.ElementTree as ET
 from termcolor import colored
@@ -130,6 +131,35 @@ def update_cert():
     except Exception as e:
         print(colored(f"[ERROR] Unexpected error: {e}", "red"))
         logger.error(f"An unexpected error occurred while updating the CERT feed: {e}")
+
+def check_unix_socket(path):
+    """
+    Checks if a Unix socket connection is available at the specified path.
+
+    Args:
+        path (str): Path to the Unix socket.
+
+    Returns:
+        bool: True if the connection to the Unix socket is successful, False otherwise.
+    """
+    # Check if the socket path exists
+    if not os.path.exists(path):
+        print(f"[ERROR] Unix socket at {path} does not exist.")
+        return False
+
+    try:
+        # Create a Unix socket
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client_socket:
+            # Attempt to connect to the Unix socket
+            client_socket.connect(path)
+            print(f"[INFO] Successfully connected to Unix socket at {path}.")
+        return True
+    except PermissionError:
+        print(f"[ERROR] Permission denied when trying to connect to {path}.")
+        return False
+    except socket.error as e:
+        print(f"[ERROR] Could not connect to Unix socket at {path}: {e}")
+        return False
 
 
 def read_host_from_file(file_path):
