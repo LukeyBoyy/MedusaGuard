@@ -96,7 +96,7 @@ sudo pip3 install -r requirements.txt
 ## **API Commands**
 
 #### GVM
-Used in the OpenVAS module. List of API commands:
+List of API commands used in the OpenVAS module:
 ```python
 gmp.get_version()
 
@@ -112,9 +112,10 @@ gmp.get_report(report_id=reportid,
 ```
 
 #### Metasploit
-Used in the Nuclei Module:
+List of API commands used in the Nuclei Module:
 ```python
-MsfRpcClient(password, server=server, port=port, ssl=ssl) # Establishes a connection to the Metasploit RPC server with the specified credentials and connection parameters.
+MsfRpcClient(password, server=server, port=port,
+   ssl=ssl) # Establishes a connection to the Metasploit RPC server with the specified credentials and connection parameters.
 client.modules.use('exploit', exploit_name) # Loads the specified exploit module.
 client.modules.use('payload', payload_name) # Loads the specified payload module.
 payload['LHOST'] = lhost # Sets the local host (LHOST) option for the payload.
@@ -127,6 +128,7 @@ console.write("set LPORT {lport}") # Sets the LPORT option within the console se
 console.write("exploit") # Executes the exploit with the configured settings in the console.
 console.read() # Retrieves the output of the commands executed in the console for logging or reporting purposes.
 ```
+
 ---
 ## **License**  
 This project is licensed under the terms of the [Apache License Version 2.0](https://www.apache.org/licenses/LICENSE-2.0) and is available for free.
