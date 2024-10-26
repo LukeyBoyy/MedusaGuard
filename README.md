@@ -30,8 +30,9 @@ An all-in-one tool that integrates **Nikto**, **Greenbone OpenVAS**, **Nuclei**,
    - [Interactive Dashboard for Reports](#interactive-dashboard-for-reports)
 4. [How to Install Medusa Guard](#how-to-install-medusa-guard)
 5. [Getting Started Guide for Medusa Guard](#getting-started-guide-for-medusa-guard)
-6. [License](#license)
-7. [Credits](#credits)
+6. [Dependencies](#Dependencies)
+7. [License](#license)
+8. [Credits](#credits)
 
 ---
 
@@ -92,6 +93,35 @@ sudo pip3 install -r requirements.txt
 
 ---
 
+## **API Commands**
+
+#### GVM
+Used in the OpenVAS module. List of API commands:
+gmp.get_version() – Used to retrieve the version of the GVM to check if it is active.
+gmp.authenticate(username, password) – Authenticates the user with the GVM server.
+gmp.get_targets() – Retrieves a list of existing targets.
+gmp.create_target(name=target_name, hosts=[hosts], port_list_id=port_list_name) – Creates a new target if it does not exist.
+gmp.create_task(name=task_name, config_id=scan_config, target_id=targetid, scanner_id=scanner) – Creates a task for the specified target.
+gmp.start_task(task_id=taskid) – Starts the created task.
+gmp.get_task(task_id=taskid) – Retrieves the status of the task to monitor its progress.
+gmp.get_report(report_id=reportid, report_format_id=<format_id>, ignore_pagination=True, details=True) – Fetches the report in the specified format (XML, PDF, or CSV).
+
+#### Metasploit
+Used in the Nuclei Module:
+MsfRpcClient(password, server=server, port=port, ssl=ssl) – Establishes a connection to the Metasploit RPC server with the specified credentials and connection parameters.
+client.modules.use('exploit', exploit_name) – Loads the specified exploit module.
+client.modules.use('payload', payload_name) – Loads the specified payload module.
+payload['LHOST'] = lhost – Sets the local host (LHOST) option for the payload.
+payload['LPORT'] = lport – Sets the local port (LPORT) option for the payload.
+client.consoles.console() – Opens a new console session in Metasploit for command execution.
+console.write("use {exploit_name}") – Selects the exploit module within the console session.
+console.write("set PAYLOAD {payload_name}") – Sets the payload for the exploit.
+console.write("set LHOST {lhost}") – Sets the LHOST option within the console session.
+console.write("set LPORT {lport}") – Sets the LPORT option within the console session.
+console.write("exploit") – Executes the exploit with the configured settings in the console.
+console.read() – Retrieves the output of the commands executed in the console for logging or reporting purposes.
+
+---
 ## **License**  
 This project is licensed under the terms of the [Apache License Version 2.0](https://www.apache.org/licenses/LICENSE-2.0) and is available for free.
 
