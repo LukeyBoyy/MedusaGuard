@@ -97,7 +97,7 @@ sudo pip3 install -r requirements.txt
 
 #### GVM
 Used in the OpenVAS module. List of API commands:
-```bash
+```python
 gmp.get_version()
 
 gmp.authenticate(username, password)
@@ -113,19 +113,20 @@ gmp.get_report(report_id=reportid,
 
 #### Metasploit
 Used in the Nuclei Module:
-MsfRpcClient(password, server=server, port=port, ssl=ssl) – Establishes a connection to the Metasploit RPC server with the specified credentials and connection parameters.
-client.modules.use('exploit', exploit_name) – Loads the specified exploit module.
-client.modules.use('payload', payload_name) – Loads the specified payload module.
-payload['LHOST'] = lhost – Sets the local host (LHOST) option for the payload.
-payload['LPORT'] = lport – Sets the local port (LPORT) option for the payload.
-client.consoles.console() – Opens a new console session in Metasploit for command execution.
-console.write("use {exploit_name}") – Selects the exploit module within the console session.
-console.write("set PAYLOAD {payload_name}") – Sets the payload for the exploit.
-console.write("set LHOST {lhost}") – Sets the LHOST option within the console session.
-console.write("set LPORT {lport}") – Sets the LPORT option within the console session.
-console.write("exploit") – Executes the exploit with the configured settings in the console.
-console.read() – Retrieves the output of the commands executed in the console for logging or reporting purposes.
-
+```python
+MsfRpcClient(password, server=server, port=port, ssl=ssl) # Establishes a connection to the Metasploit RPC server with the specified credentials and connection parameters.
+client.modules.use('exploit', exploit_name) # Loads the specified exploit module.
+client.modules.use('payload', payload_name) # Loads the specified payload module.
+payload['LHOST'] = lhost # Sets the local host (LHOST) option for the payload.
+payload['LPORT'] = lport # Sets the local port (LPORT) option for the payload.
+client.consoles.console() # Opens a new console session in Metasploit for command execution.
+console.write("use {exploit_name}") # Selects the exploit module within the console session.
+console.write("set PAYLOAD {payload_name}") # Sets the payload for the exploit.
+console.write("set LHOST {lhost}") # Sets the LHOST option within the console session.
+console.write("set LPORT {lport}") # Sets the LPORT option within the console session.
+console.write("exploit") # Executes the exploit with the configured settings in the console.
+console.read() # Retrieves the output of the commands executed in the console for logging or reporting purposes.
+```
 ---
 ## **License**  
 This project is licensed under the terms of the [Apache License Version 2.0](https://www.apache.org/licenses/LICENSE-2.0) and is available for free.
