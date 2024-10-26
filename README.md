@@ -97,14 +97,17 @@ sudo pip3 install -r requirements.txt
 
 #### GVM
 Used in the OpenVAS module. List of API commands:
-gmp.get_version() – Used to retrieve the version of the GVM to check if it is active.
-gmp.authenticate(username, password) – Authenticates the user with the GVM server.
-gmp.get_targets() – Retrieves a list of existing targets.
-gmp.create_target(name=target_name, hosts=[hosts], port_list_id=port_list_name) – Creates a new target if it does not exist.
-gmp.create_task(name=task_name, config_id=scan_config, target_id=targetid, scanner_id=scanner) – Creates a task for the specified target.
-gmp.start_task(task_id=taskid) – Starts the created task.
-gmp.get_task(task_id=taskid) – Retrieves the status of the task to monitor its progress.
-gmp.get_report(report_id=reportid, report_format_id=<format_id>, ignore_pagination=True, details=True) – Fetches the report in the specified format (XML, PDF, or CSV).
+```bash
+gmp.get_version()
+
+gmp.authenticate(username, password)
+gmp.get_targets() # Retrieves a list of existing targets.
+gmp.create_target(name=target_name, hosts=[hosts], port_list_id=port_list_name)
+gmp.create_task(name=task_name, config_id=scan_config, target_id=targetid, scanner_id=scanner) #Creates a task for the specified target.
+gmp.start_task(task_id=taskid)
+gmp.get_task(task_id=taskid) #Retrieves the status of the task to monitor its progress.
+gmp.get_report(report_id=reportid, report_format_id=<format_id>, ignore_pagination=True, details=True) # Fetches the report in the specified format (XML, PDF, or CSV).
+```
 
 #### Metasploit
 Used in the Nuclei Module:
