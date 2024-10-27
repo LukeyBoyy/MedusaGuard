@@ -100,7 +100,7 @@ List of API commands used in the OpenVAS module:
 ```python
 gmp.get_version()
 
-gmp.authenticate(username, password)
+gmp.authenticate(username, password) # Starts a gmp session, authentication is for the life of the session
 gmp.get_targets() # Retrieves a list of existing targets.
 gmp.create_target(name=target_name, hosts=[hosts], port_list_id=port_list_name)
 gmp.create_task(name=task_name,
