@@ -112,7 +112,7 @@ gmp.get_report(report_id=reportid,
 ```
 
 #### Metasploit
-List of API commands used in the Nuclei Module:
+List of API commands used in the Metasploit Module:
 ```python
 MsfRpcClient(password, server=server, port=port,
    ssl=ssl) # Establishes a connection to the Metasploit RPC server with the specified credentials and connection parameters.
