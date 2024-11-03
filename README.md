@@ -31,7 +31,7 @@ An all-in-one tool that integrates **Nikto**, **Greenbone OpenVAS**, **Nuclei**,
 4. [How to Install Medusa Guard](#how-to-install-medusa-guard)
 5. [Getting Started Guide for Medusa Guard](#getting-started-guide-for-medusa-guard)
 6. [Sample Reports](#sample-medusaguard-reports)
-7. [Dependencies](#Dependencies)
+7. [API Commands](#APICommands)
 8. [License](#license)
 9. [Credits](#credits)
 
