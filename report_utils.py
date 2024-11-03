@@ -19,9 +19,11 @@ from reportlab.platypus import (
     Image,
     PageBreak,
 )
-from datetime import datetime
+from pandas.api.types import CategoricalDtype
+from datetime import datetime, timedelta
 from pathlib import Path
 from termcolor import colored
+from logger import logger
 
 
 def add_first_page_header(canvas, doc):
@@ -81,7 +83,6 @@ def add_later_page_number(canvas, doc):
     canvas.setFont("Helvetica", 10)
     canvas.drawRightString(200 * mm, 15 * mm, text)
 
-import re
 
 def parse_metasploit_report(report_path):
     """
@@ -200,6 +201,141 @@ def parse_metasploit_report(report_path):
     return parsed_data
 
 
+def load_historical_data(file_path):
+    """
+    Load historical scan counts from a JSON file.
+
+    Args:
+        file_path (str): Path to the JSON file.
+
+    Returns:
+        list: List of historical scan records.
+    """
+    if not os.path.exists(file_path):
+        logger.info(f"Historical data file not found. Creating a new one at {file_path}.")
+        return []
+    try:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+            logger.info(f"Loaded {len(data)} historical records.")
+            return data
+    except json.JSONDecodeError:
+        logger.error(f"JSON decode error. The file {file_path} might be corrupted.")
+        return []
+    except Exception as e:
+        logger.error(f"Failed to load historical data: {e}")
+        return []
+
+
+def save_historical_data(file_path, data):
+    """
+    Save historical scan counts to a JSON file.
+
+    Args:
+        file_path (str): Path to the JSON file.
+        data (list): List of historical scan records.
+    """
+    try:
+        with open(file_path, 'w') as f:
+            json.dump(data, f, indent=4)
+            logger.info(f"Saved {len(data)} records to {file_path}.")
+    except Exception as e:
+        logger.error(f"Failed to save historical data: {e}")
+
+
+def append_scan_result(data, high_count, medium_count, low_count, timestamp=None):
+    """
+    Append a new scan result to the historical data.
+
+    Args:
+        data (list): Existing historical data.
+        high_count (int): Number of high-severity vulnerabilities.
+        medium_count (int): Number of medium-severity vulnerabilities.
+        low_count (int): Number of low-severity vulnerabilities.
+        timestamp (str, optional): Specific timestamp for the scan. If None, current time is used.
+
+    Returns:
+        list: Updated historical data.
+    """
+    if timestamp is None:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    new_entry = {
+        "timestamp": timestamp,
+        "high_count": high_count,
+        "medium_count": medium_count,
+        "low_count": low_count
+    }
+    data.append(new_entry)
+    logger.info(f"Appended new scan result at {timestamp}.")
+    return data
+
+
+def generate_line_graph(data, graph_path):
+    """
+    Generate a line graph from historical scan data.
+
+    Args:
+        data (list): Historical scan data.
+        graph_path (str): Path to save the generated graph.
+    """
+    if len(data) < 2:
+        logger.info("Not enough data points to generate a line graph. Skipping graph generation.")
+
+    # Convert data to DataFrame for easier plotting
+    df = pd.DataFrame(data)
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df.sort_values('timestamp', inplace=True)
+
+    plt.figure(figsize=(6.75, 3.375))
+
+    high_color = '#d43f3a'
+    medium_color = '#fdc432'
+    low_color = '#3eae49'
+
+    # Plotting the lines
+    plt.plot(
+        df['timestamp'], df['high_count'],
+        marker='o', linestyle='-', linewidth=4, alpha=1.0,
+        label='High Count', color=high_color, markersize=7
+    )
+    plt.plot(
+        df['timestamp'], df['medium_count'],
+        marker='o', linestyle='-', linewidth=2, alpha=0.7,
+        label='Medium Count', color=medium_color, markersize=5
+    )
+    plt.plot(
+        df['timestamp'], df['low_count'],
+        marker='o', linestyle='-', linewidth=2, alpha=0.5,
+        label='Low Count', color=low_color, markersize=5
+    )
+
+    plt.xlabel('Timestamp', fontsize=8)
+    plt.ylabel('Vulnerability Count', fontsize=8)
+    plt.xticks(fontsize=8)
+    plt.yticks(fontsize=8)
+    plt.title('Vulnerability Counts Over Time', fontsize=10, fontweight='bold')
+    plt.legend(loc='upper left', fontsize=10, frameon=False)
+
+    # Gridlines
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5, color='lightgray', alpha=0.5)
+
+    # Improve date formatting on x-axis
+    plt.gcf().autofmt_xdate()  # Auto-format the x-axis labels for better readability
+
+    # Removes the top and right spines for a cleaner look
+    ax = plt.gca()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    plt.tight_layout()
+
+    try:
+        plt.savefig(graph_path, bbox_inches="tight", dpi=300)
+        plt.close()
+        logger.info(f"Line graph generated and saved to {graph_path}.")
+    except Exception as e:
+        logger.eror(f"Failed to save line graph: {e}")
+
 
 def generate_report(
     csv_path,
@@ -262,10 +398,6 @@ def generate_report(
         result_graphs_dir, f"{task_name}_exploitpiechart_{completion_time}.png"
     )
     exploit_pie_chart_path = exploit_pie_out
-    #bar_out = os.path.join(
-    #    result_graphs_dir, f"{task_name}_barchart_{completion_time}.png"
-    #)
-    #bar_chart_path = bar_out
     gui_pie_out = os.path.join(
         result_graphs_dir, f"vuln_pie.png"
     )
@@ -288,6 +420,12 @@ def generate_report(
     hosts_scanned = hosts_count
     apps_count = apps_count
     os_count = os_count
+
+    # Define paths for historical data and the line graph
+    historical_data_file = "historical_results.json"
+    historical_graph_out = os.path.join(
+        result_graphs_dir, f"{task_name}_historical_counts_{completion_time}.png"
+    )
 
     # Sort vulnerabilities by CVSS score for reporting
     top_vulns = df.sort_values(by="CVSS", ascending=False)
@@ -319,6 +457,8 @@ def generate_report(
             line
             for line in lines
             if not line.startswith('"Nikto') and line.strip() != ""
+            and line.strip() != ""
+            and not line.startswith('Host IP')
         ]
 
         # Check if there are any data lines
@@ -332,10 +472,12 @@ def generate_report(
                 "Host",
                 "IP",
                 "Port",
-                "Vulnerability",
+                "Reference",
                 "Method",
                 "URI",
                 "Description",
+                "MID",
+                "DID",
             ]
             nikto_df.fillna("N/A", inplace=True)
         else:
@@ -413,57 +555,6 @@ def generate_report(
     except Exception as e:
         print(colored(f"[ERROR] Failed to generate exploits pie chart: {e}", "red"))
 
-    #try:
-    #    # Generate the bar chart for scan information
-    #    fig2, ax2 = plt.subplots(figsize=(3.5, 3.5))  # Smaller size
-    #    bars = ax2.bar(bar_legend_labels, bar_sizes, color=bar_colors, edgecolor="none")
-#
-    #    # Add value labels on top of each bar
-    #    for bar in bars:
-    #        yval = bar.get_height()
-    #        ax2.text(
-    #            bar.get_x() + bar.get_width() / 2,
-    #            yval + 0.5,
-    #            f"{int(yval)}",
-    #            ha="center",
-    #            va="bottom",
-    #            fontsize=10,
-    #            color="black",
-    #        )
-#
-    #    # Set labels and formatting
-    #    ax2.set_ylabel("Count", fontsize=10)
-    #    ax2.set_title("Scan Information", fontsize=12, fontweight="bold", pad=15)
-    #    ax2.tick_params(axis="x", labelsize=10)
-    #    ax2.tick_params(axis="y", labelsize=10)
-    #    ax2.spines["top"].set_visible(False)
-    #    ax2.spines["right"].set_visible(False)
-    #    ax2.spines["left"].set_linewidth(1.5)
-    #    ax2.spines["bottom"].set_linewidth(1.5)
-    #    # Removes x-axis label.
-    #    ax2.set_xticklabels([])
-    #    ax2.yaxis.grid(False)
-    #    ax2.xaxis.grid(False)
-    #    ax2.set_axisbelow(True)
-#
-    #    ax2.legend(
-    #        bars,
-    #        bar_legend_labels,
-    #        title="Categories",
-    #        loc="upper left",
-    #        fontsize=8,
-    #        title_fontsize=10,
-    #    )
-#
-    #    plt.tight_layout()
-#
-    #    # Save the bar chart
-    #    plt.savefig(bar_chart_path, bbox_inches="tight", dpi=300)
-    #    plt.close(fig2)  # Close the figure to free memory
-    #except Exception as e:
-    #    print(colored(f"[ERROR] Failed to generate bar chart: {e}", "red"))
-
-    # Generate the pie graph for the GUI result section
     try:
         gui_vuln_labels = ['High', 'Medium', 'Low']
         gui_vuln_sizes = [high_vulns, medium_vulns, low_vulns]
@@ -520,6 +611,38 @@ def generate_report(
     except Exception as e:
         print(colored(f"[ERROR] Failed to generate GUI exploit pie chart: {e}", "red"))
 
+    # Historical Vulnerability Counts
+    try:
+        # Load existing historical data
+        historical_data = load_historical_data(historical_data_file)
+
+        # Capture the current timestamp
+        current_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Append the current scan results
+        historical_data = append_scan_result(
+            historical_data,
+            high_count=high_vulns,
+            medium_count=medium_vulns,
+            low_count=low_vulns,
+            timestamp=current_timestamp
+        )
+
+        # Save the updated historical data
+        save_historical_data(historical_data_file, historical_data)
+
+        # Generate the historical line graph
+        generate_line_graph(historical_data, historical_graph_out)
+
+        # Check if the graph was generated successfully
+        if os.path.exists(historical_graph_out):
+            graph_generated = True
+        else:
+            graph_generated = False
+    except Exception as e:
+        logger.error(f"Failed to process historical data: {e}")
+        graph_generated = False
+
     try:
         # Initialize the PDF document
         doc = SimpleDocTemplate(
@@ -559,7 +682,7 @@ def generate_report(
         elements.append(Paragraph(f"Automated Security Assessment", centered_style))
         elements.append(Paragraph(f"Created by: MedusaGuard v1.0", centered_style))
         elements.append(
-            Paragraph(f"Date: {datetime.now().strftime('%Y-%m-%d')}", centered_style)
+            Paragraph(f"Date: {datetime.now().strftime('%d-%m-%Y')}", centered_style)
         )
 
         # Confidentiality note in italicized font
@@ -582,9 +705,9 @@ def generate_report(
         elements.append(Spacer(1, 0.3 * inch))
         elements.append(
             Paragraph(
-                "This document contains the results of the automated vulnerability scanning and exploitation tool. "
+                "This document contains the results of the automated vulnerability scanning and exploitation tool known as MedusaGuard. "
                 "It outlines identified vulnerabilities, their potential impacts, and suggested remediation strategies "
-                "along with whether or not exploitation was successful.",
+                "along with whether or not they are exploitable.",
                 rep_summary_style,
             )
         )
@@ -680,28 +803,31 @@ def generate_report(
 
         if summary_availabe:
             # Generate the executive summary based on the number of high vulnerabilities
-            if high_count <= 3:
+            if high_vulns >= 5:
                 exec_summary = (
-                    f"The purpose of this vulnerability scan was to identify weaknesses within our IT infrastructure "
+                    f"The purpose of this security assessment was to identify weaknesses within our IT infrastructure "
                     f"that could be exploited by attackers, potentially leading to financial loss, regulatory penalties, "
                     f"or damage to our reputation. Of the {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, "
-                    f"with {high_vulns} categorized as high, posing the most significant risk. Immediate remediation of any high vulnerabilities "
+                    f"with {high_vulns} categorized as high, posing the most significant risk. "
+                    f"Immediate remediation of any high vulnerabilities "
                     f"identified is necessary to avoid potential business disruptions and ensure the continued trust of our customers. "
-                    f"This report provides detailed findings and actionable recommendations to mitigate these risks, safeguarding our operations."
+                    f"This report provides detailed findings and actionable recommendations to mitigate these risks, safeguarding your operations."
                 )
-            elif high_count > 4:
+            elif 1 <= high_vulns < 5:
                 exec_summary = (
-                    f"The vulnerability scan identified several high-risk vulnerabilities within our IT infrastructure. "
-                    f"Out of the {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, with {high_vulns} being high-risk. "
-                    f"These should be addressed promptly to avoid potential security breaches."
-                    f"This report provides detailed findings and actionable recommendations to mitigate these risks, safeguarding our operations."
+                    f"The security assessment identified several areas of concern within the IT infrastructure. "
+                    f"Out of {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, "
+                    f"with {high_vulns} categorized as high severity. "
+                    f"Timely remediation of identified vulnerabilities is recommended to enhance the security posture. "
+                    f"This report provides detailed findings and actionable recommendations to address these risks."
                 )
             else:
                 exec_summary = (
-                    f"The vulnerability scan did not identify any high-risk vulnerabilities. "
-                    f"Out of the {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were found, with none classified as high risk "
-                    f"{medium_vulns} classified as medium risk, and {low_vulns} classified as low risk. Therefore, our IT infrastructure shows "
-                    f"a strong security posture, though continuous monitoring and improvement are still recommended. "
+                    f"The security assessment indicates a relatively low level of risk within the IT infrastructure. "
+                    f"Out of {hosts_scanned} hosts scanned, {total_vulns} vulnerabilities were identified, "
+                    f"with {high_vulns} categorized as high severity. "
+                    f"While immediate risk is low, addressing identified vulnerabilities will help maintain and improve your security posture. "
+                    f"This report provides detailed findings and recommendations for ongoing security enhancements."
                 )
 
             elements.append(Paragraph(exec_summary, styleN))
@@ -874,6 +1000,30 @@ def generate_report(
                 )
                 elements.append(chart_table)
                 elements.append(Spacer(1, 0.5 * inch))
+
+                # Add the Historical Line Graph
+                if graph_generated:
+                    # Create a new table row for the line graph
+                    historical_graph_table = Table(
+                        [
+                            [
+                                Image(historical_graph_out, width=6.75 * inch, height=3.375 * inch)
+                            ]
+                        ],
+                        colWidths=[6.75 * inch]
+                    )
+                    historical_graph_table.setStyle(
+                        TableStyle(
+                            [
+                                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                            ]
+                        )
+                    )
+                    elements.append(historical_graph_table)
+                    elements.append(Spacer(1, 0.5 * inch))
             else:
                 # If charts are missing, display a message
                 no_charts_message = Paragraph(
@@ -897,7 +1047,6 @@ def generate_report(
             "if any of the terms are unknown to you."
         )
         elements.append(Paragraph(top_10_text, styleN))
-        elements.append(PageBreak())
 
         # Prepare data for the vulnerabilities table
         vuln_data = [["Vulnerability", "CVSS", "Impact", "Remediation"]]
@@ -1007,6 +1156,9 @@ def generate_report(
         recommendations = (
             "Immediately address any critical vulnerabilities, continue to perform regular security assessments, "
             "and allocate resources to strengthen the security posture of our organization."
+            "We strongly recommend establishing a continuous vulnerability management program, including regular security "
+            "assessments and timely remediation of any identified high-risk vulnerabilities. By proactively managing vulnerabilities, "
+            "the organisation can significantly reduce risk and ensure compliance with industry regulations and best practices."
         )
         elements.append(Paragraph(recommendations, styleN))
         elements.append(Spacer(1, 0.75 * inch))
@@ -1014,12 +1166,15 @@ def generate_report(
         # --- Conclusion ---
         elements.append(Paragraph("5. Conclusion", styleH))
         conclusion = (
-            "Addressing these vulnerabilities will help mitigate risks to the organization and ensure compliance with "
-            "industry standards. We recommend taking immediate action on any critical vulnerabilities and implementing long-term "
-            "strategies to improve our security framework."
+                f"In conclusion, the assessment identified a total of {total_vulns} vulnerabilities "
+                f"across {hosts_scanned} hosts, with {high_vulns} high-risk, {medium_vulns} medium-risk, and "
+                f"{low_vulns} low-risk vulnerabilities. The presence of high-risk vulnerabilities indicates a significant "
+                "threat to the organisation. Immediate action is required to remediate high-risk vulnerabilities to prevent "
+                "potential breaches that could lead to financial, reputational, or regulatory damages."
         )
         elements.append(Paragraph(conclusion, styleN))
         elements.append(Spacer(1, 0.75 * inch))
+        elements.append(PageBreak())
 
         # --- Appendices ---
 
@@ -1059,6 +1214,13 @@ def generate_report(
                 Paragraph("Vulnerability Scan", styleN),
                 Paragraph(
                     "Automated process that identifies, evaluates, and reports potential security weaknesses in an organisation’s IT systems.",
+                    styleN,
+                ),
+            ],
+            [
+                Paragraph("DID (Detection ID)", styleN),
+                Paragraph(
+                    "Detection ID (DID) is a unique identifier assigned to each individual occurrence of a vulnerability on a specific asset.",
                     styleN,
                 ),
             ],
@@ -1215,18 +1377,29 @@ def generate_report(
 
         # Appendix: Detailed Vulnerability List
         # Extract relevant columns for the detailed vulnerability list
-        detailed_vulns = df[["IP", "Severity", "Summary", "Solution"]]
+        detailed_vulns = df[["IP", "DID", "Severity", "Summary", "QoD", "Solution"]].copy()
+
+        # Define the order for the 'Severity' column
+        severity_order = ['High', 'Medium', 'Low']
+        severity_dtype = CategoricalDtype(categories=severity_order, ordered=True)
+        detailed_vulns['Severity'] = detailed_vulns['Severity'].astype(severity_dtype)
+
+        # Exclude entries with 'Log' severity or any not in the specified categories
+        detailed_vulns = detailed_vulns[detailed_vulns['Severity'].notna()]
+
+        # Sort the DataFrame by 'Severity'
+        detailed_vulns = detailed_vulns.sort_values('Severity')
 
         # Prepare the data for the detailed vulnerabilities table
-        detailed_vulns_data = [["IP Address", "Severity", "Summary", "Solution"]]
+        detailed_vulns_data = [["IP", "DID", "Severity", "Summary", "QoD", "Solution"]]
         for i, row in detailed_vulns.iterrows():
-            if row["Severity"] == "Log":
-                continue  # Skip entries with 'Log' severity
             detailed_vulns_data.append(
                 [
                     Paragraph(str(row["IP"]), styleN),  # IP Address
+                    Paragraph(str(row["DID"])[3:], styleN),  # DID without 'DID' prefix
                     Paragraph(str(row["Severity"]), styleN),  # Severity
                     Paragraph(str(row["Summary"]), styleN),  # Summary
+                    Paragraph(str(row["QoD"]), styleN),  # Severity
                     Paragraph(str(row["Solution"]), styleN),  # Solution
                 ]
             )
@@ -1234,7 +1407,7 @@ def generate_report(
         if detailed_vulns is not None and not detailed_vulns.empty and len(detailed_vulns_data) > 1:
             elements.append(Paragraph("Appendix: Detailed Vulnerability List", styleH))
             detailed_vulnerability_text = (
-                "The following table outlines all of the vulnerabilities identified using the scan accompanied by important information "
+                f"The following table outlines all of the {total_vulns} vulnerabilities identified using the scan accompanied by important information "
                 "such as the impacted host, severity level, summary, and solution."
             )
             elements.append(Paragraph(detailed_vulnerability_text, styleN))
@@ -1243,7 +1416,7 @@ def generate_report(
 
             detailed_vulns_table = Table(
                 detailed_vulns_data,
-                colWidths=[1.2 * inch, 0.7 * inch, 2.3 * inch, 2.6 * inch],
+                colWidths=[1.2 * inch, 0.5 * inch, 0.7 * inch, 2 * inch, 0.5 * inch, 1.9 * inch],
             )
 
             detailed_vulns_table_style = TableStyle(
@@ -1316,7 +1489,7 @@ def generate_report(
         elements.append(Spacer(1, 0.5 * inch))
         elements.append(Paragraph("Appendix: Nikto Scan Results", styleH))
         nikto_text = (
-            "The following table presents the results from the Nikto scan, detailing web server vulnerabilities "
+            "The following table presents the results from the Nikto scan, detailing web service/application based vulnerabilities "
             "identified during the assessment."
         )
         elements.append(Paragraph(nikto_text, styleN))
@@ -1324,20 +1497,21 @@ def generate_report(
 
         if nikto_df is not None and not nikto_df.empty:
             # Prepare Nikto data for the table
-            nikto_table_data = [["Host", "Port", "Vulnerability", "Description"]]
+            nikto_table_data = [["Host", "DID", "Port", "Reference", "Description"]]
             for index, row in nikto_df.iterrows():
                 nikto_table_data.append(
                     [
                         Paragraph(str(row["Host"]), styleN),
+                        Paragraph(str(row["DID"])[3:], styleN),
                         Paragraph(str(row["Port"]), styleN),
-                        Paragraph(str(row["Vulnerability"]), styleN),
+                        Paragraph(str(row["Reference"]), styleN),
                         Paragraph(str(row["Description"]), styleN),
                     ]
                 )
 
             nikto_table = Table(
                 nikto_table_data,
-                colWidths=[1.5 * inch, 0.7 * inch, 1.5 * inch, 3.0 * inch],
+                colWidths=[1.1 * inch, 0.5 * inch, 0.5 * inch, 1.5 * inch, 3.2 * inch],
             )
 
             nikto_table_style = TableStyle(
@@ -1465,14 +1639,14 @@ def generate_report(
                 elements.append(Paragraph("Exploited CVEs:", styleH))
                 metasploit_exp_cve = (
                     """The table below enumerates the specific CVEs that were successfully exploited during the assessment. 
-                    Each entry provides detailed information about the vulnerability, the exploit utilized, the target IP and port, 
+                    Each entry provides detailed information about the vulnerability, the exploit utilised, the target IP and port, 
                     and the number of payloads that were successfully deployed. This data underscores the effectiveness of the 
                     exploitation efforts and highlights the critical vulnerabilities that require immediate attention."""
                 )
 
                 elements.append(Paragraph(metasploit_exp_cve, styleN))
                 elements.append(Spacer(1, 0.25 * inch))
-                exploited_data = [["CVE", "Exploit", "Target IP", "Target Port", "Payload Successful",]]
+                exploited_data = [["CVE", "Exploit (Metasploit Module)", "Target IP", "Target Port", "Payload Successful",]]
                 for exploit in exploited_cves:
                     exploited_data.append([
                         Paragraph(exploit.get("cve", "N/A"), styleN),
@@ -1518,7 +1692,7 @@ def generate_report(
             if cves_without_exploits:
                 elements.append(Paragraph("CVEs Detected Without Available Exploits:", styleH))
                 metasploit_no_exploit = (
-                    """This section provides a list of CVEs for which have no corresponding Metasploit exploit"""
+                    """This section provides a list of CVEs for which have no corresponding Metasploit exploit."""
                 )
                 elements.append(Paragraph(metasploit_no_exploit, styleN))
                 elements.append(Spacer(1, 0.25 * inch))
@@ -1567,7 +1741,7 @@ def generate_report(
 
                 elements.append(Paragraph("Summary Statistics:", styleH))
                 metasploit_summary = (
-                    """This table provides a comprehensive statistical overview of the exploitation module's 
+                    """This table provides a statistical overview of the exploitation module's 
                     performance. The 'Total CVEs Examined' column shows the number of CVEs that were processed by the 
                     exploit module. 'Total Exploited CVEs' represents the number of CVEs that were successfully 
                     exploited, while 'Incompatible CVEs' indicates the number of CVEs for which no corresponding 
