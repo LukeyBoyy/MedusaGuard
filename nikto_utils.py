@@ -1,4 +1,6 @@
 import os
+import csv
+import json
 import time
 import subprocess
 from termcolor import colored
@@ -94,6 +96,9 @@ def run_nikto_scans(nikto_target_dir, nikto_target_file):
                         # Skip the header line for subsequent files
                         next(infile)  # Skip header line
                         outfile.write(infile.read())
+
+        process_nikto_csv_report(str(nikto_combined_output_file))
+
         print(
             colored("[INFO]", "cyan")
             + f" Combined output saved to "
@@ -133,3 +138,125 @@ def run_nikto_scans(nikto_target_dir, nikto_target_file):
 
     # Return the path to the combined Nikto CSV output file
     return nikto_combined_output_file
+
+
+def process_nikto_csv_report(csv_path, vuln_mapping_file='vuln_mapping.json', finding_mapping_file='finding_mapping.json'):
+    """
+    Process the Nikto CSV report to include unique MID and DID.
+
+    Args:
+        csv_path (str): Path to the Nikto CSV report file.
+        vuln_mapping_file (str): Path to the JSON file storing vulnerability to MID mapping.
+        finding_mapping_file (str): Path to the JSON file storing finding to DID mapping.
+
+    Returns:
+        None
+    """
+    # Load existing vulnerability mapping or initialize a new one
+    if os.path.exists(vuln_mapping_file):
+        with open(vuln_mapping_file, 'r') as f:
+            vuln_mapping = json.load(f)
+    else:
+        vuln_mapping = {}
+
+    # Load existing finding mapping or initialize a new one
+    if os.path.exists(finding_mapping_file):
+        with open(finding_mapping_file, 'r') as f:
+            finding_mapping = json.load(f)
+    else:
+        finding_mapping = {}
+
+    # Determine the next MID and DID to assign
+    if vuln_mapping:
+        next_mid = max(int(mid[3:]) for mid in vuln_mapping.values()) + 1
+    else:
+        next_mid = 1
+
+    if finding_mapping:
+        next_did = max(int(did[3:]) for did in finding_mapping.values()) + 1
+    else:
+        next_did = 1
+
+    updated_rows = []
+
+    fieldnames = [
+        'Host IP',
+        'Hostname',
+        'Port',
+        'Reference',
+        'Method',
+        'URL',
+        'Description'
+    ]
+
+    with open(csv_path, 'r', newline='', encoding='utf-8') as csvfile_in:
+        reader = csv.DictReader(csvfile_in, fieldnames=fieldnames)
+        rows = list(reader)
+        # Remove any header rows or comments
+        rows = [row for row in rows if not any(value.startswith('Nikto') for value in row.values())]
+
+        # Ensure 'MID' and 'DID' are in fieldnames
+        if 'MID' not in fieldnames:
+            fieldnames += ['MID']
+        if 'DID' not in fieldnames:
+            fieldnames += ['DID']
+
+        for row in rows:
+            # Assign MID based on a unique vulnerability identifier
+            vuln_id = row.get('Reference') or row.get('Description')
+            if not vuln_id:
+                logger.warning(f"No vulnerability ID available for row: {row}")
+                continue
+            vuln_id = vuln_id.strip()
+            vuln_key = f"Nikto:{vuln_id}"
+
+            # Check if this vulnerability is already in the MID mapping
+            if vuln_key in vuln_mapping:
+                mid = vuln_mapping[vuln_key]
+            else:
+                mid = f"MID{next_mid:06d}"
+                vuln_mapping[vuln_key] = mid
+                next_mid += 1
+
+            # Assign DID based on unique finding key
+            host = row.get('Host IP') or row.get('Hostname')
+            if not host:
+                logger.warning(f"No host information available for row: {row}")
+                continue
+
+            port = row.get('Port') or 'unknown_port'
+            method = row.get('Method') or 'unknown_method'
+            url = row.get('URL') or 'unknown_url'
+
+            finding_key = f"Nikto:{vuln_id}_{host}_{port}_{method}_{url}"
+
+            if finding_key in finding_mapping:
+                did = finding_mapping[finding_key]
+            else:
+                did = f"DID{next_did:08d}"
+                finding_mapping[finding_key] = did
+                next_did += 1
+
+            # Add MID and DID to the row
+            row['MID'] = mid
+            row['DID'] = did
+            updated_rows.append(row)
+
+    if updated_rows:
+        # Write the updated CSV file
+        with open(csv_path, 'w', newline='', encoding='utf-8') as csvfile_out:
+            writer = csv.DictWriter(csvfile_out, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(updated_rows)
+
+        # Save the updated mappings
+        with open(vuln_mapping_file, 'w') as f:
+            json.dump(vuln_mapping, f, indent=4)
+        with open(finding_mapping_file, 'w') as f:
+            json.dump(finding_mapping, f, indent=4)
+
+        print(colored("[INFO]", "cyan") + " Nikto CSV report updated with MIDs and DIDs.")
+        logger.info("Nikto CSV report updated with MIDs and DIDs.")
+    else:
+        print(colored("[WARNING]", "yellow") + " No rows were updated in the Nikto CSV report.")
+        logger.warning("No rows were updated in the Nikto CSV report.")
