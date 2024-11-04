@@ -119,7 +119,33 @@ To display the help menu for the CLI version, you can use any of the following o
 -h  --help  -help
 ```
 
-The help menu will provide a list of available arguments and usage examples to guide you through configuring MedusaGuard via the cli.
+The help menu will provide a list of available arguments and usage examples to guide you through configuring MedusaGuard via the cli:
+```
+usage: main.py [-h] [--config CONFIG] [--username USERNAME] [--password PASSWORD] [--path PATH] [--port_list_name PORT_LIST_NAME] [--scan_config SCAN_CONFIG] [--scanner SCANNER] [--target_name TARGET_NAME] [--target_ip TARGET_IP]
+               [--task_name TASK_NAME]
+
+Update config.ini settings.
+
+options:
+  -h, --help            show this help message and exit
+  --config CONFIG       Path to the config.ini file
+  --username USERNAME   Username for the GVM server
+  --password PASSWORD   Password for the GVM server
+  --path PATH           Path to the Unix socket for GVM connection
+  --port_list_name PORT_LIST_NAME
+                        Port list name for target configuration
+  --scan_config SCAN_CONFIG
+                        Scan configuration ID
+  --scanner SCANNER     Scanner ID
+  --target_name TARGET_NAME
+                        Name of the target
+  --target_ip TARGET_IP
+                        IP address of the target to be scanned or file containing one IP address per line
+  --task_name TASK_NAME
+                        Name of the task to be created and executed
+
+Example usage: sudo python3 <script_name>.py --config config.ini --username admin --password passwd --target_name router --task_name router_scan
+```
 
 
 ## **Getting Started Guide for Medusa Guard**
