@@ -849,7 +849,7 @@ def save_to_config():
     placeholder_username = "Enter your greenbone username here"
     placeholder_password = "Enter your password here"
     placeholder_target_name = "Enter your target name here"
-    placeholder_target_ip = "Enter the target IP or path to list here"
+    placeholder_target_ip = "Enter the target IP here"
     placeholder_port_list_name = "Enter the port list ID here"
     placeholder_task_name = "Enter your task name here"
     placeholder_scan_config = "Enter the scan config ID here"
@@ -868,8 +868,6 @@ def save_to_config():
         and edit_conf_target_name.get()
     ):
         config["target"]["target_name"] = edit_conf_target_name.get()
-    if edit_conf_target_ip.get() != placeholder_target_ip and edit_conf_target_ip.get():
-        config["target"]["target_ip"] = edit_conf_target_ip.get()
     if (
         edit_conf_port_list_name.get() != placeholder_port_list_name
         and edit_conf_port_list_name.get()
@@ -889,6 +887,24 @@ def save_to_config():
     # Save the updated config file
     with open("config.ini", "w") as configfile:
         config.write(configfile)
+
+    # Handle the target IP input
+    target_ip_value = edit_conf_target_ip.get()
+    if target_ip_value != placeholder_target_ip and target_ip_value:
+        # Ensure the new IP is added on a new line
+        if os.path.exists("targets.txt"):
+            with open("targets.txt", "r+") as targets_file:
+                targets_file.seek(0, os.SEEK_END)  # Move to the end of the file
+                if targets_file.tell() > 0:
+                    targets_file.seek(targets_file.tell() - 1)
+                    last_char = targets_file.read(1)
+                    if last_char != '\n':
+                        targets_file.write('\n')  # Add newline if not present
+                targets_file.write(f"{target_ip_value}\n")  # Append new IP
+        else:
+            # If the file doesn't exist, create it and write the IP
+            with open("targets.txt", "w") as targets_file:
+                targets_file.write(f"{target_ip_value}\n")
 
     # Clear all entries after saving
     clear_entries()
@@ -2831,7 +2847,7 @@ edit_conf_target_ip.place(
     width=250.0,
     height=15.0
 )
-add_placeholder(edit_conf_target_ip, "Enter the target IP or path to list here")
+add_placeholder(edit_conf_target_ip, "Enter the target IP here")
 
 edit_conf_button_image_23 = PhotoImage(
     file=relative_to_assets("button_23.png"))
