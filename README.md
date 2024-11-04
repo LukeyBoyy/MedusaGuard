@@ -89,7 +89,6 @@ cd MedusaGuard
 sudo pip3 install -r requirements.txt
 ```
 
----
 
 ## **Quick Start Guide**
 
