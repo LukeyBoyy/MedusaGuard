@@ -121,7 +121,6 @@ To display the help menu for the CLI version, you can use any of the following o
 
 The help menu will provide a list of available arguments and usage examples to guide you through configuring MedusaGuard via the cli.
 
----
 
 ## **Getting Started Guide for Medusa Guard**
 [MedusaGuard - Getting Started Guide.pdf](https://github.com/user-attachments/files/17359582/MedusaGuard.-.Getting.Started.Guide.pdf)
