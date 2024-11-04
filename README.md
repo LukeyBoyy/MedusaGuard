@@ -181,7 +181,7 @@ This section lists common issues that may arise with MedusaGuard, along with rec
 - **Cause**: File path does not exist.
 - **Solution**: Start the scan or execute the `main.py` script, which will create all the required report directories.
 
-#### Report summary results not showing
+#### Report Summary Results not Showing
 - **Cause**: This issue typically only occurs right after installation, however it does not impact the tools operation whatsover (i.e., all reports still get generated). 
 - **Solution**: Run another scan. 
 
