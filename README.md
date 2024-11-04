@@ -99,6 +99,7 @@ After installing MedusaGuard, follow these instructions to get started quickly:
 To launch MedusaGuard with a graphical user interface, enter the following command in your terminal:
 
 ```bash
+# Executes the GUI script
 sudo python3 medusaguard.py
 ```
 
@@ -107,12 +108,14 @@ sudo python3 medusaguard.py
 If you prefer to use the command-line interface, enter the following command (this will execute MedusaGuard using configuration details found in config.ini):
 
 ```bash
+# Executes the CLI script 
 sudo python3 main.py
 ```
 
 To display the help menu for the CLI version, you can use any of the following options:
 
 ```bash
+# Help menu arguments 
 -h  --help  -help
 ```
 
