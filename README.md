@@ -29,12 +29,13 @@ An all-in-one tool that integrates **Nikto**, **Greenbone OpenVAS**, **Nuclei**,
    - [Advanced Exploitation Automation](#advanced-exploitation-automation)
    - [Interactive Dashboard for Reports](#interactive-dashboard-for-reports)
 4. [How to Install Medusa Guard](#how-to-install-medusa-guard)
-5. [Troubleshooting Guide](#troubleshooting-guide)
-6. [Getting Started Guide for Medusa Guard](#getting-started-guide-for-medusa-guard)
-7. [Sample Reports](#Sample-Medusa-Guard-Reports)
-8. [API Commands](#API-Commands)
-9. [License](#license)
-10. [Credits](#credits)
+5. [Quick Start Guide](#Quick-Start-Guide)
+6. [Troubleshooting Guide](#troubleshooting-guide)
+7. [Getting Started Guide for Medusa Guard](#getting-started-guide-for-medusa-guard)
+8. [Sample Reports](#Sample-Medusa-Guard-Reports)
+9. [API Commands](#API-Commands)
+10. [License](#license)
+11. [Credits](#credits)
 
 ---
 
@@ -87,6 +88,36 @@ cd MedusaGuard
 # Install necessary dependencies
 sudo pip3 install -r requirements.txt
 ```
+
+---
+
+## **Quick Start Guide**
+
+After installing MedusaGuard, follow these instructions to get started quickly:
+
+### **Run the GUI**
+
+To launch MedusaGuard with a graphical user interface, enter the following command in your terminal:
+
+```bash
+sudo python3 medusaguard.py
+```
+
+### **Run the CLI**
+
+If you prefer to use the command-line interface, enter the following command (this will execute MedusaGuard using configuration details found in config.ini):
+
+```bash
+sudo python3 main.py
+```
+
+To display the help menu for the CLI version, you can use any of the following options:
+
+```bash
+-h  --help  -help
+```
+
+The help menu will provide a list of available arguments and usage examples to guide you through configuring MedusaGuard via the cli.
 
 ---
 
