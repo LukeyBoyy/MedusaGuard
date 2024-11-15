@@ -132,7 +132,6 @@ def main():
     scanner = config["task"]["scanner"]
 
     # Run Nuclei Scans
-    update_nuclei()  # Update Nuclei templates
     nuclei_combined_output_file = run_nuclei_scans(
         nuclei_target_dir="nuclei_results", nuclei_target_file="targets.txt"
     )
