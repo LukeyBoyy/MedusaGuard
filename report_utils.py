@@ -314,7 +314,7 @@ def generate_line_graph(data, graph_path):
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.title('Vulnerability Counts Over Time', fontsize=10, fontweight='bold')
-    plt.legend(loc='upper left', fontsize=10, frameon=False)
+    plt.legend(loc='upper left', fontsize=8, frameon=False)
 
     # Gridlines
     plt.grid(True, which='both', linestyle='--', linewidth=0.5, color='lightgray', alpha=0.5)
@@ -1085,7 +1085,7 @@ def generate_report(
         if len(vuln_data) > 1:
             # Create the vulnerabilities table
             vuln_table = Table(
-                vuln_data, colWidths=[1.3 * inch, 0.5 * inch, 2.5 * inch, 2.5 * inch]
+                vuln_data, colWidths=[1.3 * inch, 0.5 * inch, 2.6 * inch, 2.3 * inch]
             )
             vuln_table_style = TableStyle(
                 [
@@ -1141,6 +1141,7 @@ def generate_report(
                 vuln_table_style.add("BACKGROUND", (0, i), (-1, i), bg_color)
 
             vuln_table.setStyle(vuln_table_style)
+            elements.append(Spacer(1, 0.25 * inch))
             elements.append(vuln_table)
         else:
             # No vulnerabilities found
@@ -1226,7 +1227,7 @@ def generate_report(
             ],
         ]
 
-        definitions_table = Table(definitions_data, colWidths=[2.3 * inch, 4.5 * inch])
+        definitions_table = Table(definitions_data, colWidths=[2.3 * inch, 4.4 * inch])
         definitions_table_style = TableStyle(
             [
                 (
@@ -1326,7 +1327,7 @@ def generate_report(
         ]
 
         actions_table = Table(
-            actions_data, colWidths=[1.3 * inch, 2.5 * inch, 3 * inch]
+            actions_data, colWidths=[1.2 * inch, 2.5 * inch, 3 * inch]
         )
         actions_table_style = TableStyle(
             [
@@ -1416,7 +1417,7 @@ def generate_report(
 
             detailed_vulns_table = Table(
                 detailed_vulns_data,
-                colWidths=[1.2 * inch, 0.5 * inch, 0.7 * inch, 2 * inch, 0.5 * inch, 1.9 * inch],
+                colWidths=[1.2 * inch, 0.5 * inch, 0.7 * inch, 1.9 * inch, 0.5 * inch, 1.9 * inch],
             )
 
             detailed_vulns_table_style = TableStyle(
@@ -1511,7 +1512,7 @@ def generate_report(
 
             nikto_table = Table(
                 nikto_table_data,
-                colWidths=[1.1 * inch, 0.5 * inch, 0.5 * inch, 1.5 * inch, 3.2 * inch],
+                colWidths=[1.1 * inch, 0.5 * inch, 0.5 * inch, 1.5 * inch, 3.1 * inch],
             )
 
             nikto_table_style = TableStyle(
@@ -1578,7 +1579,7 @@ def generate_report(
 
             nuclei_table = Table(
                 nuclei_table_data,
-                colWidths=[1.75 * inch, 1.0 * inch, 1.0 * inch, 3.0 * inch],
+                colWidths=[1.75 * inch, 1.0 * inch, 1.0 * inch, 2.9 * inch],
             )
 
             nuclei_table_style = TableStyle(
@@ -1702,7 +1703,7 @@ def generate_report(
 
                 cves_without_table = Table(
                     cves_without_exploits_data,
-                    colWidths=[6.75 * inch]
+                    colWidths=[6.7 * inch]
                 )
 
                 cves_without_table_style = TableStyle(
