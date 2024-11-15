@@ -8,41 +8,6 @@ from logger import logger
 print_timestamp = time.strftime("%d-%m-%Y %H:%M:%S")
 
 
-def update_nuclei():
-    """
-    Update Nuclei to the latest version.
-
-    This function runs 'nuclei -version' to ensure that Nuclei is up to date.
-    """
-    try:
-        # Command to check Nuclei version (you can replace this with the actual update command)
-        nuclei_command = ["nuclei", "-update"]
-        print(colored(">>> Nuclei Vulnerability Scan", attrs=["bold"]))
-        nuclei_msg = colored("Updating Nuclei...", "white")
-
-        # Display the update message
-        print(nuclei_msg, end="", flush=True)
-
-        # Run the Nuclei update command
-        result = subprocess.run(
-            nuclei_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=True,
-            timeout=2700,
-        )
-
-        print(colored("\rNuclei update successful.", "white"))
-        logger.info("Nuclei update successful")
-    except subprocess.CalledProcessError as e:
-        print(colored(f"\r[ERROR] An error occurred while updating Nuclei: {e}", "red"))
-        logger.error("Nuclei update timed out")
-    except Exception as e:
-        print(colored(f"\r[ERROR] Unexpected error: {e}", "red"))
-        logger.error(f"An error occurred while updating: {e}")
-
-
 def run_nuclei_scans(nuclei_target_dir, nuclei_target_file):
     """
     Run Nuclei scans on a list of targets and combine the results.
