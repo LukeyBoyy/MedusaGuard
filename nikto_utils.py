@@ -50,7 +50,7 @@ def run_nikto_scans(nikto_target_dir, nikto_target_file):
             nikto_target_dir, f"{nikto_target}_{nikto_timestamp}.csv"
         )
         # Construct the Nikto command
-        nikto_cmd = f"nikto -h {nikto_target} -nointeractive -Format csv -output {nikto_output_file}"
+        nikto_cmd = f"nikto -h {nikto_target} -nointeractive -p 80,443 -Format csv -output {nikto_output_file}"
         nikto_scan_msg = f"Running Nikto scan on {nikto_target}"
         logger.info(f"Running NIkto scan on {nikto_target}")
 
