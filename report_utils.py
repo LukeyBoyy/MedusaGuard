@@ -3,9 +3,12 @@ import io
 import time
 import re
 import json
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.colors import to_rgba
+from matplotlib.patches import Patch
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -25,6 +28,10 @@ from pathlib import Path
 from termcolor import colored
 from logger import logger
 
+
+# -------------------- #
+#  Header & Footer     #
+# -------------------- #
 
 def add_first_page_header(canvas, doc):
     """
@@ -83,6 +90,10 @@ def add_later_page_number(canvas, doc):
     canvas.setFont("Helvetica", 10)
     canvas.drawRightString(200 * mm, 15 * mm, text)
 
+
+# -------------------- #
+#   Helper Functions   #
+# -------------------- #
 
 def parse_metasploit_report(report_path):
     """
@@ -336,6 +347,10 @@ def generate_line_graph(data, graph_path):
     except Exception as e:
         logger.eror(f"Failed to save line graph: {e}")
 
+
+# -------------------- #
+#   Report Generation  #
+# -------------------- #
 
 def generate_report(
     csv_path,
@@ -611,6 +626,10 @@ def generate_report(
     except Exception as e:
         print(colored(f"[ERROR] Failed to generate GUI exploit pie chart: {e}", "red"))
 
+    # -------------------- #
+    # Historical Data      #
+    # -------------------- #
+
     # Historical Vulnerability Counts
     try:
         # Load existing historical data
@@ -643,6 +662,10 @@ def generate_report(
         logger.error(f"Failed to process historical data: {e}")
         graph_generated = False
 
+    # -------------------- #
+    #    PDF Document      #
+    # -------------------- #
+
     try:
         # Initialize the PDF document
         doc = SimpleDocTemplate(
@@ -672,6 +695,10 @@ def generate_report(
             leading=14,  # Line height
             fontName="Helvetica",
         )
+
+        # -------------------- #
+        #     Title Page       #
+        # -------------------- #
 
         # --- Build the Title Page ---
         elements.append(Spacer(1, 0.5 * inch))
@@ -722,6 +749,10 @@ def generate_report(
 
         elements.append(Spacer(1, 0.5 * inch))
 
+        # -------------------- #
+        #   Table of Contents   #
+        # -------------------- #
+
         # --- Table of Contents ---
         toc_title_style = ParagraphStyle(
             name="TOCTitle",
@@ -746,7 +777,7 @@ def generate_report(
                 "3",
             ],
             [
-                "Recommendations .................................................................................................................................................................................",
+                "Recommendations ..................................................................................................................................................................................",
                 "4",
             ],
             [
@@ -754,16 +785,20 @@ def generate_report(
                 "4",
             ],
             [
-                "Appendix: Definitions ..............................................................................................................................................................................",
+                "Appendix 1: Definitions ...........................................................................................................................................................................",
                 "4",
             ],
             [
-                "Appendix: Recommended Actions to be Taken Based on Vulnerability Severity ...................................................................................",
+                "Appendix 2: Recommended Actions to be Taken Based on Vulnerability Severity ................................................................................",
                 "5",
             ],
             [
-                "Appendix: Detailed Tool Results  .........................................................................................................................................................",
-                "5",
+                "Appendix 3: Host-Level Vulnerability Metrics ..........................................................................................................................................",
+                "6",
+            ],
+            [
+                "Appendix 4: Detailed Tool Results  .........................................................................................................................................................",
+                "7",
             ],
         ]
 
@@ -789,6 +824,10 @@ def generate_report(
         elements.append(Paragraph("Table of Contents", toc_title_style))
         elements.append(toc_table)
         elements.append(PageBreak())  # Start a new page
+
+        # -------------------- #
+        #   Executive Summary  #
+        # -------------------- #
 
         # --- Executive Summary ---
         elements.append(Paragraph("1. Executive Summary", styleH))
@@ -841,6 +880,10 @@ def generate_report(
             elements.append(no_data_message)
 
         elements.append(Spacer(1, 0.5 * inch))
+
+        # -------------------- #
+        #     Key Findings     #
+        # -------------------- #
 
         # --- Key Findings ---
         elements.append(Paragraph("2. Key Findings", styleH))
@@ -1038,6 +1081,10 @@ def generate_report(
             )
             elements.append(no_vuln_message)
 
+        # -------------------- #
+        # Top 10 Vulnerabilities#
+        # -------------------- #
+
         # --- Top 10 Vulnerabilities ---
         elements.append(Paragraph("3. Top 10 Vulnerabilities", styleH))
         top_10_text = (
@@ -1152,17 +1199,28 @@ def generate_report(
 
         elements.append(Spacer(1, 0.75 * inch))
 
+        # -------------------- #
+        #    Recommendations   #
+        # -------------------- #
+
         # --- Recommendations ---
         elements.append(Paragraph("4. Recommendations", styleH))
         recommendations = (
             "Immediately address any critical vulnerabilities, continue to perform regular security assessments, "
-            "and allocate resources to strengthen the security posture of our organization."
+            "and allocate resources to strengthen the security posture of our organization. "
             "We strongly recommend establishing a continuous vulnerability management program, including regular security "
             "assessments and timely remediation of any identified high-risk vulnerabilities. By proactively managing vulnerabilities, "
-            "the organisation can significantly reduce risk and ensure compliance with industry regulations and best practices."
+            "the organisation can significantly reduce risk and ensure compliance with industry regulations and best practices. "
+            "In addition, it is highly advisable to leverage robust security tools to verify these findings and validate remediation efforts. "
+            "Tools like Tenable Nessus, Qualys, and Rapid7 InsightVM are industry-standard vulnerability scanners that can provide a secondary layer of assurance. "
+            "Furthermore, manual exploitation of CVEs that were exploited by MedusaGuard is recommended."
         )
         elements.append(Paragraph(recommendations, styleN))
         elements.append(Spacer(1, 0.75 * inch))
+
+        # -------------------- #
+        #      Conclusion      #
+        # -------------------- #
 
         # --- Conclusion ---
         elements.append(Paragraph("5. Conclusion", styleH))
@@ -1177,10 +1235,18 @@ def generate_report(
         elements.append(Spacer(1, 0.75 * inch))
         elements.append(PageBreak())
 
+        # -------------------- #
+        #      Appendices      #
+        # -------------------- #
+
+        # -------------------- #
+        #  Appendix 1: Definitions #
+        # -------------------- #
+
         # --- Appendices ---
 
         # Appendix: Definitions
-        elements.append(Paragraph("Appendix: Definitions", styleH))
+        elements.append(Paragraph("Appendix 1: Definitions", styleH))
         definitions_data = [
             ["Term", "Definition"],
             [
@@ -1222,6 +1288,13 @@ def generate_report(
                 Paragraph("DID (Detection ID)", styleN),
                 Paragraph(
                     "Detection ID (DID) is a unique identifier assigned to each individual occurrence of a vulnerability on a specific asset.",
+                    styleN,
+                ),
+            ],
+            [
+                Paragraph("Quality of Detection (QoD)", styleN),
+                Paragraph(
+                    "A metric used in OpenVAS scanning to represent the confidence level or reliability of a detected vulnerability. QoD values are expressed as percentages, with higher percentages indicating greater confidence in the accuracy of the detection.",
                     styleN,
                 ),
             ],
@@ -1275,10 +1348,14 @@ def generate_report(
         elements.append(Spacer(1, 0.75 * inch))
         elements.append(PageBreak())
 
+        # -------------------- #
+        # Appendix 2: Recommended Actions #
+        # -------------------- #
+
         # Appendix: Recommended Actions
         elements.append(
             Paragraph(
-                "Appendix: Recommended Actions to be Taken Based on Vulnerability Severity",
+                "Appendix 2: Recommended Actions to be Taken Based on Vulnerability Severity",
                 styleH,
             )
         )
@@ -1375,6 +1452,312 @@ def generate_report(
         elements.append(actions_table)
         elements.append(Spacer(1, 0.75 * inch))  # Increased spacing
         elements.append(PageBreak())
+
+        # -------------------- #
+        # Appendix 3: Host-Level Vulnerability Metrics #
+        # -------------------- #
+
+        # Appendix: Host-Level Vulnerability Metrics
+        elements.append(Paragraph("Appendix 3: Host-Level Vulnerability Metrics", styleH))
+
+        host_metrics_description = (
+            "This section provides a detailed analysis of vulnerability metrics at the host level. "
+            "Specifically, it includes the median and maximum CVSS (Common Vulnerability Scoring System) scores for each host identified during the assessment. "
+            "The median CVSS score offers a robust average that minimises the impact of outliers, while the maximum CVSS score highlights the most severe vulnerability present on each host. "
+            "By presenting average CVSS scores per host, this section helps prioritise remediation efforts by identifying the most vulnerable systems in the network. "
+            "It offers actionable insights into which hosts require immediate attention based on their overall risk profile."
+        )
+
+        elements.append(Paragraph(host_metrics_description, styleN))
+        elements.append(Spacer(1, 0.25 * inch))
+
+        # Read the CSV file into a DataFrame
+        df_host_metrics = pd.read_csv(csv_path)
+
+        # Clean the IP column
+        df_host_metrics['IP'] = df_host_metrics['IP'].astype(str).str.strip().str.lower()
+        df_host_metrics = df_host_metrics[df_host_metrics['IP'].notnull() & (df_host_metrics['IP'] != '')]
+
+        # Exclude rows where CVSS is NaN or zero
+        df_valid_cvss_host = df_host_metrics.dropna(subset=['CVSS'])
+        df_valid_cvss_host = df_valid_cvss_host[df_valid_cvss_host['CVSS'] > 0]
+
+        # Compute host-level metrics
+        host_metrics = df_valid_cvss_host.groupby('IP').agg(
+            Median_CVSS=('CVSS', 'median'),
+            Maximum_CVSS=('CVSS', 'max'),
+            Vulnerability_Count=('CVSS', 'count')
+        ).reset_index()
+
+        # Compute counts of severity per IP
+        severity_counts = df_valid_cvss_host.groupby(['IP', 'Severity']).size().unstack(fill_value=0).reset_index()
+
+        # Merge with host_metrics DataFrame on 'IP'
+        host_metrics = host_metrics.merge(severity_counts, on='IP', how='left')
+
+        # Sort the hosts by Maximum CVSS in descending order
+        host_metrics = host_metrics.sort_values(by='Maximum_CVSS', ascending=False)
+
+        # Prepare data for the table
+        host_metrics_data = [["Host IP", "Max CVSS", "Median CVSS", "Vuln Count", "High", "Medium", "Low"]]
+
+        for index, row in host_metrics.iterrows():
+            host_metrics_data.append([
+                str(row["IP"]),
+                f"{row['Maximum_CVSS']:.1f}",
+                f"{row['Median_CVSS']:.1f}",
+                str(int(row["Vulnerability_Count"])),
+                int(row.get('High', 0)),
+                int(row.get('Medium', 0)),
+                int(row.get('Low', 0))
+            ])
+
+        # Create the table
+        host_metrics_table = Table(
+            host_metrics_data,
+            colWidths=[1.3 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch, 0.7 * inch, 0.7 * inch, 0.7 * inch]
+        )
+
+        # Apply initial styles
+        host_metrics_table_style = TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#2C3E50")),  # Header row background
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),  # Header text color
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),  # Left-align text
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
+                ("TOPPADDING", (0, 0), (-1, 0), 10),
+                ("BOTTOMPADDING", (1, 0), (-1, -1), 8),
+                ("TOPPADDING", (1, 0), (-1, -1), 8),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                ("BOX", (0, 0), (-1, -1), 0.75, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]
+        )
+
+        # Apply styles per row
+        for i in range(1, len(host_metrics_data)):
+            # Alternate row background color
+            bg_color = colors.HexColor("#EAECEE") if i % 2 == 0 else colors.HexColor("#F2F3F4")
+            host_metrics_table_style.add("BACKGROUND", (0, i), (-1, i), bg_color)
+
+            # Max CVSS value is at column index 1
+            try:
+                max_cvss_value = float(host_metrics_data[i][1])
+            except ValueError:
+                max_cvss_value = None
+
+            if max_cvss_value is not None:
+                if 0.0 <= max_cvss_value <= 3.9:
+                    cell_color = colors.HexColor("#3eae49")  # Green
+                elif 4.0 <= max_cvss_value <= 6.9:
+                    cell_color = colors.HexColor("#fdc432")  # Yellow/Orange
+                elif 7.0 <= max_cvss_value <= 10.0:
+                    cell_color = colors.HexColor("#d43f3a")  # Red
+                else:
+                    cell_color = None
+
+                if cell_color:
+                    host_metrics_table_style.add('BACKGROUND', (1, i), (1, i), cell_color)
+
+            # Median CVSS value is at column index 2
+            try:
+                median_cvss_value = float(host_metrics_data[i][2])
+            except ValueError:
+                median_cvss_value = None
+
+            if median_cvss_value is not None:
+                if 0.0 <= median_cvss_value <= 3.9:
+                    cell_color = colors.HexColor("#3eae49")  # Green
+                elif 4.0 <= median_cvss_value <= 6.9:
+                    cell_color = colors.HexColor("#fdc432")  # Yellow
+                elif 7.0 <= median_cvss_value <= 10.0:
+                    cell_color = colors.HexColor("#d43f3a")  # Red
+                else:
+                    cell_color = None
+
+                if cell_color:
+                    host_metrics_table_style.add('BACKGROUND', (2, i), (2, i), cell_color)
+
+        host_metrics_table.setStyle(host_metrics_table_style)
+
+        elements.append(host_metrics_table)
+
+        # -------------------- #
+        #      Heatmap         #
+        # -------------------- #
+
+        # Generate the heatmap and save the image
+        try:
+            # Define required columns without 'IP'
+            required_columns = ['Maximum_CVSS', 'Median_CVSS', 'Vulnerability_Count']
+            for col in required_columns:
+                if col not in host_metrics.columns:
+                    host_metrics[col] = 0  # Fill missing columns with zeros
+
+            # Verify 'IP' column exists
+            if 'IP' not in host_metrics.columns:
+                logger.error("The 'IP' column is missing from the host_metrics DataFrame.")
+                raise ValueError("The 'IP' column is required for heatmap generation.")
+
+            # Select the columns you want to include in the heatmap, including 'IP'
+            heatmap_data = host_metrics[['IP'] + required_columns].copy()
+            heatmap_data.set_index('IP', inplace=True)
+
+            # Define color mapping functions
+            def map_cvss_color(value):
+                """
+                Maps CVSS score to color based on defined ranges.
+                """
+                if 0.0 <= value <= 3.9:
+                    return '#3eae49'  # Green
+                elif 4.0 <= value <= 6.9:
+                    return '#fdc432'  # Yellow
+                elif 7.0 <= value <= 10.0:
+                    return '#d43f3a'  # Red
+                else:
+                    return '#FFFFFF'  # White for undefined ranges
+
+            def map_vuln_count_color(value):
+                """
+                Maps Vulnerability Count to color based on defined ranges (same as CVSS).
+                """
+                if 0.0 <= value <= 15:
+                    return '#3eae49'  # Green
+                elif 16 <= value <= 30:
+                    return '#fdc432'  # Yellow
+                elif 31 <= value <= 35:
+                    return '#d43f3a'  # Red
+                elif value > 35:
+                    return '#d43f3a'  # Red for counts above 35
+                else:
+                    return '#FFFFFF'  # White for undefined ranges
+
+            # Create a color array based on the mappings
+            color_array = []
+            for idx, row in heatmap_data.iterrows():
+                row_colors = []
+                for col in required_columns:
+                    if col in ['Maximum_CVSS', 'Median_CVSS']:
+                        try:
+                            color = map_cvss_color(float(row[col]))
+                        except (ValueError, TypeError):
+                            color = '#FFFFFF'  # Default to white if conversion fails
+                    elif col == 'Vulnerability_Count':
+                        try:
+                            color = map_vuln_count_color(float(row[col]))
+                        except (ValueError, TypeError):
+                            color = '#FFFFFF'  # Default to white if conversion fails
+                    else:
+                        color = '#FFFFFF'  # Default to white if column not recognized
+                    row_colors.append(color)
+                color_array.append(row_colors)
+
+            # Convert color array to RGBA
+            rgba_array = []
+            for row in color_array:
+                rgba_row = []
+                for hex_color in row:
+                    try:
+                        rgba = to_rgba(hex_color)
+                    except ValueError:
+                        rgba = to_rgba('#FFFFFF')  # Default to white if invalid color
+                    rgba_row.append(rgba)
+                rgba_array.append(rgba_row)
+
+            rgba_array = np.array(rgba_array)
+
+            # Create plot with fixed width and proportional height
+            fixed_width = 6  # inches
+            aspect_ratio = rgba_array.shape[1] / rgba_array.shape[0]  # columns / rows
+            fixed_height = fixed_width / aspect_ratio  # maintain aspect ratio
+
+            # Create plot
+            fig, ax = plt.subplots(figsize=(fixed_width, fixed_height))
+
+            # Display the heatmap with the mapped colors
+            ax.imshow(rgba_array, aspect='auto')
+
+            # Set ticks and labels
+            ax.set_xticks(np.arange(len(required_columns)))
+            ax.set_yticks(np.arange(len(heatmap_data.index)))
+            ax.set_xticklabels(required_columns)
+            ax.set_yticklabels(heatmap_data.index)
+
+            # Rotate the tick labels and set their alignment
+            plt.setp(ax.get_xticklabels(), rotation=45, ha='right', rotation_mode='anchor')
+
+            # Annotate each cell with the actual value
+            for i in range(len(heatmap_data.index)):
+                for j, col_name in enumerate(required_columns):
+                    try:
+                        value = heatmap_data.iloc[i, j]
+                        # Format the text based on the column
+                        if col_name in ['Maximum_CVSS', 'Median_CVSS']:
+                            text = f"{float(value):.1f}"
+                        elif col_name == 'Vulnerability_Count':
+                            text = f"{int(value)}"
+                        else:
+                            text = str(value)
+                        ax.text(j, i, text, ha='center', va='center', color='black', fontsize=9)
+                    except IndexError:
+                        # Handle cases where the value is missing
+                        ax.text(j, i, "N/A", ha='center', va='center', color='black', fontsize=9)
+                    except ValueError:
+                        # Handle cases where conversion fails
+                        ax.text(j, i, "N/A", ha='center', va='center', color='black', fontsize=9)
+
+            # Set labels and title
+            #ax.set_xlabel('Metrics', fontsize=8)
+            #ax.set_ylabel('Host IP', fontsize=8)
+            ax.set_title('Host-Level Vulnerability Metrics Heatmap', fontsize=10, fontweight='bold')
+
+            # Set minor ticks to draw grid lines
+            ax.set_xticks(np.arange(len(required_columns) + 1) - 0.5, minor=True)
+            ax.set_yticks(np.arange(len(heatmap_data.index) + 1) - 0.5, minor=True)
+            # Enable grid on minor ticks
+            ax.grid(which='minor', color='black', linestyle='-', linewidth=1)
+            # Hide major ticks
+            ax.tick_params(which='minor', bottom=False, left=False)
+            # Optional: Adjust the spines to ensure the grid lines are within the axes
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+
+            # Create legend for CVSS and Vulnerability Count colors
+            legend_elements = [
+                Patch(facecolor='#d43f3a', edgecolor='black', label='High Risk'),  # Red
+                Patch(facecolor='#fdc432', edgecolor='black', label='Medium Risk'),  # Yellow/Orange
+                Patch(facecolor='#3eae49', edgecolor='black', label='Low Risk'),  # Green
+            ]
+
+            ax.legend(handles=legend_elements, bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+
+            plt.tight_layout()
+
+            # Save the heatmap image to the result_graphs directory
+            heatmap_image_path = os.path.join(result_graphs_dir,
+                                              f"{task_name}_host_metrics_heatmap_{completion_time}.png")
+            plt.savefig(heatmap_image_path, bbox_inches='tight', dpi=300)
+            plt.close()
+
+            # Add the heatmap image to the PDF
+            elements.append(Spacer(1, 0.25 * inch))
+
+            # Create the Image object with fixed width and proportional height, centered
+            heatmap_image = Image(heatmap_image_path, width=fixed_width * inch, height=fixed_height * inch,
+                                  hAlign='CENTER')
+            elements.append(heatmap_image)
+            elements.append(PageBreak())
+        except Exception as e:
+            logger.error(f"Failed to generate heatmap: {e}")
+            print(colored(f"[ERROR] Failed to generate heatmap: {e}", "red"))
+
+        # -------------------- #
+        # Detailed Vulnerabilities #
+        # -------------------- #
 
         # Appendix: Detailed Vulnerability List
         # Extract relevant columns for the detailed vulnerability list
@@ -1486,6 +1869,10 @@ def generate_report(
             elements.append(Paragraph("No Detailed Vulnerability List was provided.", styleN))
             elements.append(Spacer(1, 0.75 * inch))
 
+        # -------------------- #
+        #    Nikto Scan Results#
+        # -------------------- #
+
         # Appendix: Nikto Scan Results
         elements.append(Spacer(1, 0.5 * inch))
         elements.append(Paragraph("Appendix: Nikto Scan Results", styleH))
@@ -1545,6 +1932,10 @@ def generate_report(
             elements.append(PageBreak())
         else:
             elements.append(Paragraph("No Nikto scan results were provided.", styleN))
+
+        # -------------------- #
+        #   Nuclei Scan Results#
+        # -------------------- #
 
         # Appendix: Nuclei Scan Results
         elements.append(Spacer(1, 0.75 * inch))  # Increased spacing
@@ -1611,6 +2002,10 @@ def generate_report(
             elements.append(nuclei_table)
         else:
             elements.append(Paragraph("No Nuclei scan results were provided.", styleN))
+
+        # -------------------- #
+        #   Metasploit Results #
+        # -------------------- #
 
         # Define path for the Metasploit report
         metasploit_report_path = os.path.join("metasploit_results",
