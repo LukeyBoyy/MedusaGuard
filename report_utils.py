@@ -22,6 +22,8 @@ from reportlab.platypus import (
     Image,
     PageBreak,
 )
+from reportlab.graphics.shapes import Drawing, Rect, String
+from reportlab.graphics import renderPDF
 from pandas.api.types import CategoricalDtype
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -94,6 +96,32 @@ def add_later_page_number(canvas, doc):
 # -------------------- #
 #   Helper Functions   #
 # -------------------- #
+
+def load_asset_criticality_scores(acs_file_path):
+    """
+    Load Asset Criticality Scores from a CSV file.
+
+    Args:
+        acs_file_path (str): Path to the ACS CSV file.
+
+    Returns:
+        dict: A dictionary mapping IP addresses to ACS scores.
+    """
+    if not os.path.exists(acs_file_path):
+        logger.info("ACS file not found. All ACS values will default to 1.")
+        return {}
+    try:
+        acs_df = pd.read_csv(acs_file_path, comment='#')
+        # Ensure ACS is an integer between 1 and 5
+        acs_df['ACS'] = pd.to_numeric(acs_df['ACS'], errors='coerce').fillna(1).astype(int)
+        acs_df['ACS'] = acs_df['ACS'].clip(lower=1, upper=5)
+        acs_dict = pd.Series(acs_df.ACS.values, index=acs_df.IP).to_dict()
+        logger.info(f"Loaded ACS for {len(acs_dict)} hosts.")
+        return acs_dict
+    except Exception as e:
+        logger.error(f"Failed to load ACS file: {e}")
+        return {}
+
 
 def parse_metasploit_report(report_path):
     """
@@ -1298,6 +1326,13 @@ def generate_report(
                     styleN,
                 ),
             ],
+            [
+                Paragraph("Asset Criticaility Score (ACS)", styleN),
+                Paragraph(
+                    "A numerical value from 1 to 5 assigned to an asset to indicate its importance or criticality to the organisation. Higher scores denote higher criticality, which may warrant prioritising remediation efforts. For example, an asset with a criticality score of 5 is a highly critical asset and should be prioritised accordingly. The default ACS is 1. ",
+                    styleN,
+                ),
+            ],
         ]
 
         definitions_table = Table(definitions_data, colWidths=[2.3 * inch, 4.4 * inch])
@@ -1457,6 +1492,9 @@ def generate_report(
         # Appendix 3: Host-Level Vulnerability Metrics #
         # -------------------- #
 
+        acs_file_path = "acs_scores.csv"  # Replace with your ACS file path
+        acs_dict = load_asset_criticality_scores(acs_file_path)
+
         # Appendix: Host-Level Vulnerability Metrics
         elements.append(Paragraph("Appendix 3: Host-Level Vulnerability Metrics", styleH))
 
@@ -1489,6 +1527,9 @@ def generate_report(
             Vulnerability_Count=('CVSS', 'count')
         ).reset_index()
 
+        # Merge ACS scores
+        host_metrics['ACS'] = host_metrics['IP'].map(acs_dict).fillna(1).astype(int)
+
         # Compute counts of severity per IP
         severity_counts = df_valid_cvss_host.groupby(['IP', 'Severity']).size().unstack(fill_value=0).reset_index()
 
@@ -1499,10 +1540,65 @@ def generate_report(
         host_metrics = host_metrics.sort_values(by='Maximum_CVSS', ascending=False)
 
         # Prepare data for the table
-        host_metrics_data = [["Host IP", "Max CVSS", "Median CVSS", "Vuln Count", "High", "Medium", "Low"]]
+        host_metrics_data = [["ACS", "Host IP", "Max CVSS", "Median CVSS", "Vuln Count", "High", "Medium", "Low"]]
+
+        def create_acs_drawing(score, size=(20, 20)):
+            """
+            Create a Drawing object with a square border and the ACS number inside,
+            with dynamic text color based on the ACS score.
+
+            Args:
+                score (int): The ACS score (1-5).
+                size (tuple): Width and height of the square in points.
+
+            Returns:
+                Drawing: A ReportLab Drawing object representing the ACS.
+            """
+            width, height = size
+
+            # Define color mappings for border based on ACS score
+            border_color_mapping = {
+                1: '#3eae49',  # Green
+                2: '#7bc043',  # Light Green
+                3: '#fdc432',  # Yellow/Orange
+                4: '#f39c12',  # Orange
+                5: '#d43f3a'  # Red
+            }
+
+            # Define text color mappings based on ACS score for optimal contrast
+            text_color_mapping = {
+                1: '#3eae49',  # Green
+                2: '#7bc043',  # Light Green
+                3: '#fdc432',  # Yellow/Orange
+                4: '#f39c12',  # Orange
+                5: '#d43f3a'  # Red
+            }
+
+            # Retrieve the appropriate colors, defaulting to black border and white text if out of range
+            border_color = border_color_mapping.get(score, '#000000')
+            text_color = text_color_mapping.get(score, '#FFFFFF')
+
+            # Create a Drawing object
+            d = Drawing(width, height)
+
+            # Draw a rectangle with no fill and colored border
+            d.add(Rect(0, 0, width, height, strokeColor=border_color, fillColor=None, strokeWidth=1))
+
+            # Add the ACS number centered within the rectangle with dynamic text color
+            d.add(String(width / 2, height / 2 - 3, str(score), fontSize=10, textAnchor='middle', fillColor=text_color))
+
+            return d
 
         for index, row in host_metrics.iterrows():
+            acs_score = int(row["ACS"])
+            # Ensure ACS score is within expected range
+            if acs_score < 1:
+                acs_score = 1
+            elif acs_score > 5:
+                acs_score = 5
+
             host_metrics_data.append([
+                create_acs_drawing(acs_score, size=(20, 20)),
                 str(row["IP"]),
                 f"{row['Maximum_CVSS']:.1f}",
                 f"{row['Median_CVSS']:.1f}",
@@ -1515,7 +1611,8 @@ def generate_report(
         # Create the table
         host_metrics_table = Table(
             host_metrics_data,
-            colWidths=[1.3 * inch, 1.1 * inch, 1.1 * inch, 1.1 * inch, 0.7 * inch, 0.7 * inch, 0.7 * inch]
+            colWidths=[0.5 * inch, 1.3 * inch, 1.1 * inch, 1.1 * inch, 1 * inch, 0.5 * inch, 0.7 * inch, 0.5 * inch],
+            hAlign='CENTER'
         )
 
         # Apply initial styles
@@ -1535,6 +1632,8 @@ def generate_report(
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                 ("BOX", (0, 0), (-1, -1), 0.75, colors.black),
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("ALIGN", (0, 1), (0, -1), "CENTER"),
+                ("VALIGN", (0, 1), (0, -1), "MIDDLE"),
             ]
         )
 
@@ -1544,44 +1643,45 @@ def generate_report(
             bg_color = colors.HexColor("#EAECEE") if i % 2 == 0 else colors.HexColor("#F2F3F4")
             host_metrics_table_style.add("BACKGROUND", (0, i), (-1, i), bg_color)
 
-            # Max CVSS value is at column index 1
-            try:
-                max_cvss_value = float(host_metrics_data[i][1])
-            except ValueError:
-                max_cvss_value = None
+            ## Max CVSS styling
+            #try:
+            #    max_cvss_value = float(host_metrics_data[i][2])
+            #except ValueError:
+            #    max_cvss_value = None
+            #
+            #if max_cvss_value is not None:
+            #    if 0.0 <= max_cvss_value <= 3.9:
+            #        cell_color = colors.HexColor("#3eae49")  # Green
+            #    elif 4.0 <= max_cvss_value <= 6.9:
+            #        cell_color = colors.HexColor("#fdc432")  # Yellow/Orange
+            #    elif 7.0 <= max_cvss_value <= 10.0:
+            #        cell_color = colors.HexColor("#d43f3a")  # Red
+            #    else:
+            #        cell_color = None
+            #
+            #    if cell_color:
+            #        host_metrics_table_style.add('BACKGROUND', (2, i), (2, i), cell_color)
+            #
+            ## Median CVSS styling
+            #try:
+            #    median_cvss_value = float(host_metrics_data[i][3])
+            #except ValueError:
+            #    median_cvss_value = None
+            #
+            #if median_cvss_value is not None:
+            #    if 0.0 <= median_cvss_value <= 3.9:
+            #        cell_color = colors.HexColor("#3eae49")  # Green
+            #    elif 4.0 <= median_cvss_value <= 6.9:
+            #        cell_color = colors.HexColor("#fdc432")  # Yellow
+            #    elif 7.0 <= median_cvss_value <= 10.0:
+            #        cell_color = colors.HexColor("#d43f3a")  # Red
+            #    else:
+            #        cell_color = None
+            #
+            #    if cell_color:
+            #        host_metrics_table_style.add('BACKGROUND', (3, i), (3, i), cell_color)
 
-            if max_cvss_value is not None:
-                if 0.0 <= max_cvss_value <= 3.9:
-                    cell_color = colors.HexColor("#3eae49")  # Green
-                elif 4.0 <= max_cvss_value <= 6.9:
-                    cell_color = colors.HexColor("#fdc432")  # Yellow/Orange
-                elif 7.0 <= max_cvss_value <= 10.0:
-                    cell_color = colors.HexColor("#d43f3a")  # Red
-                else:
-                    cell_color = None
-
-                if cell_color:
-                    host_metrics_table_style.add('BACKGROUND', (1, i), (1, i), cell_color)
-
-            # Median CVSS value is at column index 2
-            try:
-                median_cvss_value = float(host_metrics_data[i][2])
-            except ValueError:
-                median_cvss_value = None
-
-            if median_cvss_value is not None:
-                if 0.0 <= median_cvss_value <= 3.9:
-                    cell_color = colors.HexColor("#3eae49")  # Green
-                elif 4.0 <= median_cvss_value <= 6.9:
-                    cell_color = colors.HexColor("#fdc432")  # Yellow
-                elif 7.0 <= median_cvss_value <= 10.0:
-                    cell_color = colors.HexColor("#d43f3a")  # Red
-                else:
-                    cell_color = None
-
-                if cell_color:
-                    host_metrics_table_style.add('BACKGROUND', (2, i), (2, i), cell_color)
-
+        # Apply the style to the table
         host_metrics_table.setStyle(host_metrics_table_style)
 
         elements.append(host_metrics_table)
