@@ -1,0 +1,8 @@
+# This CSV file maps each IP address to its Asset Criticality Score (ACS).
+# Format: IP,ACS (one IP,ACS mapping per line)
+# ACS Range: 1 (least critical) to 5 (most critical)
+
+IP,ACS
+# The following is an example and will not be included in the report
+# 192.168.100.100,4
+# Add the asset score mappings in the proceeding lines
