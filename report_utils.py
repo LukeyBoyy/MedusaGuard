@@ -1327,7 +1327,7 @@ def generate_report(
                 ),
             ],
             [
-                Paragraph("Asset Criticaility Score (ACS)", styleN),
+                Paragraph("Asset Criticality Score (ACS)", styleN),
                 Paragraph(
                     "A numerical value from 1 to 5 assigned to an asset to indicate its importance or criticality to the organisation. Higher scores denote higher criticality, which may warrant prioritising remediation efforts. For example, an asset with a criticality score of 5 is a highly critical asset and should be prioritised accordingly. The default ACS is 1. ",
                     styleN,
