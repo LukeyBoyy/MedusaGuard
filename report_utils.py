@@ -1558,20 +1558,20 @@ def generate_report(
 
             # Define color mappings for border based on ACS score
             border_color_mapping = {
-                1: '#3eae49',  # Green
-                2: '#7bc043',  # Light Green
-                3: '#fdc432',  # Yellow/Orange
-                4: '#f39c12',  # Orange
-                5: '#d43f3a'  # Red
+                1: '#7B7B11',  # Olive drab
+                2: '#A1DAB4',  # Light mint green
+                3: '#41B6C4',  # Turquoise
+                4: '#2C7FB8',  # Azure BLue
+                5: '#253494'  # Dark royal blue
             }
 
             # Define text color mappings based on ACS score for optimal contrast
             text_color_mapping = {
-                1: '#3eae49',  # Green
-                2: '#7bc043',  # Light Green
-                3: '#fdc432',  # Yellow/Orange
-                4: '#f39c12',  # Orange
-                5: '#d43f3a'  # Red
+                1: '#7B7B11',  # Olive drab
+                2: '#A1DAB4',  # Light mint green
+                3: '#41B6C4',  # Turquoise
+                4: '#2C7FB8',  # Azure BLue
+                5: '#253494'  # Dark royal blue
             }
 
             # Retrieve the appropriate colors, defaulting to black border and white text if out of range
