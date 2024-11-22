@@ -3857,6 +3857,43 @@ def dashboard_button_16_leave(e):
 dashboard_button_16.bind('<Enter>', dashboard_button_16_hover)
 dashboard_button_16.bind('<Leave>', dashboard_button_16_leave)
 
+# Asset Criticality Button
+dashboard_asset_criticality_button_image = PhotoImage(
+    file=relative_to_assets("asset_criticality.png", 1)
+)
+dashboard_asset_criticality_button = Button(
+    dashboard_frame,
+    image=dashboard_asset_criticality_button_image,
+    borderwidth=0,
+    highlightthickness=0,
+    command=lambda: open_directory('acs_scores.csv'),
+    relief="flat"
+)
+dashboard_asset_criticality_button.place(
+    x=14.0,
+    y=413.0,
+    width=258.0,
+    height=58.0
+)
+
+dashboard_asset_criticality_button_image_hover = PhotoImage(
+    file=relative_to_assets("asset_criticality_hover.png", 1)
+)
+
+def dashboard_asset_criticality_button_hover(e):
+    dashboard_asset_criticality_button.config(
+        image=dashboard_asset_criticality_button_image_hover
+    )
+
+def dashboard_asset_criticality_button_leave(e):
+    dashboard_asset_criticality_button.config(
+        image=dashboard_asset_criticality_button_image
+    )
+
+dashboard_asset_criticality_button.bind('<Enter>', dashboard_asset_criticality_button_hover)
+dashboard_asset_criticality_button.bind('<Leave>', dashboard_asset_criticality_button_leave)
+
+
 # Stop scan button
 dashboard_button_image_17 = PhotoImage(
     file=relative_to_assets("button_17.png", 1))
