@@ -31,11 +31,12 @@ An all-in-one tool that integrates **Nikto**, **Greenbone OpenVAS**, **Nuclei**,
 4. [How to Install Medusa Guard](#how-to-install-medusa-guard)
 5. [Quick Start Guide](#Quick-Start-Guide)
 6. [Troubleshooting Guide](#troubleshooting-guide)
-7. [Getting Started Guide for Medusa Guard](#getting-started-guide-for-medusa-guard)
-8. [Sample Reports](#Sample-Medusa-Guard-Reports)
-9. [API Commands](#API-Commands)
-10. [License](#license)
-11. [Credits](#credits)
+7. [Documentation](#documentation)
+8. [Getting Started Guide for Medusa Guard](#getting-started-guide-for-medusa-guard)
+9. [Sample Reports](#Sample-Medusa-Guard-Reports)
+10. [API Commands](#API-Commands)
+11. [License](#license)
+12. [Credits](#credits)
 
 ---
 
@@ -146,7 +147,8 @@ options:
 
 Example usage: sudo python3 <script_name>.py --config config.ini --username admin --password passwd --target_name router --task_name router_scan
 ```
-
+## ** Documentation**
+[MedusaGuard Documentation](https://tim-barc.github.io/MedusaGuard_docs/)
 
 ## **Getting Started Guide for Medusa Guard**
 [MedusaGuard - Getting Started Guide.pdf](https://github.com/user-attachments/files/17359582/MedusaGuard.-.Getting.Started.Guide.pdf)
