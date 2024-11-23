@@ -147,7 +147,7 @@ options:
 
 Example usage: sudo python3 <script_name>.py --config config.ini --username admin --password passwd --target_name router --task_name router_scan
 ```
-## ** Documentation**
+## **Documentation**
 [MedusaGuard Documentation](https://tim-barc.github.io/MedusaGuard_docs/)
 
 ## **Getting Started Guide for Medusa Guard**
