@@ -1241,7 +1241,7 @@ def generate_report(
             "the organisation can significantly reduce risk and ensure compliance with industry regulations and best practices. "
             "In addition, it is highly advisable to leverage robust security tools to verify these findings and validate remediation efforts. "
             "Tools like Tenable Nessus, Qualys, and Rapid7 InsightVM are industry-standard vulnerability scanners that can provide a secondary layer of assurance. "
-            "Furthermore, manual exploitation of CVEs that were exploited by MedusaGuard is recommended."
+            "Furthermore, manual exploitation of CVEs that were identified is recommended."
         )
         elements.append(Paragraph(recommendations, styleN))
         elements.append(Spacer(1, 0.75 * inch))
@@ -1558,20 +1558,20 @@ def generate_report(
 
             # Define color mappings for border based on ACS score
             border_color_mapping = {
-                1: '#7B7B11',  # Olive drab
-                2: '#A1DAB4',  # Light mint green
-                3: '#41B6C4',  # Turquoise
-                4: '#2C7FB8',  # Azure BLue
-                5: '#253494'  # Dark royal blue
+                1: '#264653',
+                2: '#2A9D8F',
+                3: '#E9C46A',
+                4: '#F4A261',
+                5: '#E76f51'
             }
 
             # Define text color mappings based on ACS score for optimal contrast
             text_color_mapping = {
-                1: '#7B7B11',  # Olive drab
-                2: '#A1DAB4',  # Light mint green
-                3: '#41B6C4',  # Turquoise
-                4: '#2C7FB8',  # Azure BLue
-                5: '#253494'  # Dark royal blue
+                1: '#264653',
+                2: '#2A9D8F',
+                3: '#E9C46A',
+                4: '#F4A261',
+                5: '#E76f51'
             }
 
             # Retrieve the appropriate colors, defaulting to black border and white text if out of range
@@ -1770,10 +1770,9 @@ def generate_report(
 
             rgba_array = np.array(rgba_array)
 
-            # Create plot with fixed width and proportional height
-            fixed_width = 6  # inches
-            aspect_ratio = rgba_array.shape[1] / rgba_array.shape[0]  # columns / rows
-            fixed_height = fixed_width / aspect_ratio  # maintain aspect ratio
+            # Fixed width and height for heatmap cells
+            fixed_width = 5
+            fixed_height = 5
 
             # Create plot
             fig, ax = plt.subplots(figsize=(fixed_width, fixed_height))
@@ -1999,7 +1998,7 @@ def generate_report(
 
             nikto_table = Table(
                 nikto_table_data,
-                colWidths=[1.1 * inch, 0.5 * inch, 0.5 * inch, 1.5 * inch, 3.1 * inch],
+                colWidths=[1.2 * inch, 0.5 * inch, 0.5 * inch, 1.5 * inch, 3 * inch],
             )
 
             nikto_table_style = TableStyle(
