@@ -1,4 +1,4 @@
-![Medusa Guard Banner](https://github.com/user-attachments/assets/ba744d99-b6a2-4f27-adbd-1ef93332d052)
+![Medusa Guard Banner](https://github.com/user-attachments/assets/9e4af1ef-491e-45e4-b66c-58c4c3c7d95f)
 
 # MedusaGuard 🛡️  
 _Your Enterprise's Shield Against Vulnerabilities_
